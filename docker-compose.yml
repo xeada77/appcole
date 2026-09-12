@@ -1,0 +1,42 @@
+services:
+  # ==========================================
+  # Servizo da aplicación Next.js
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: appcole
+    restart: unless-stopped
+    ports:
+      # Permite acceder tamén directamente pola rede local (ex: http://192.168.1.50:3000)
+      - "3000:3000"
+    volumes:
+      # Persistencia da base de datos SQLite (appcole.db) e copias de seguridade automáticas
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    networks:
+      - appcole-net
+
+  # ==========================================
+  # Servizo de Cloudflare Tunnel (cloudflared)
+  # ==========================================
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: appcole-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # Pega o teu token no arquivo .env (TUNNEL_TOKEN=eyJh...)
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - app
+    networks:
+      - appcole-net
+
+networks:
+  appcole-net:
+    driver: bridge

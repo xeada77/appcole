@@ -1,0 +1,338 @@
+import { getDb } from './db';
+import { BankAccount, AcademicYear, BudgetPartida, Category, Movement, DashboardStats } from './types';
+
+function toPlain<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
+
+export function getAcademicYears(): AcademicYear[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT id, name, is_current, start_date, end_date, initial_remanente, created_at
+    FROM academic_years
+    ORDER BY is_current DESC, id DESC
+  `).all() as unknown as AcademicYear[];
+  return toPlain(rows);
+}
+
+export function getCurrentAcademicYear(): AcademicYear {
+  const db = getDb();
+  const year = db.prepare(`
+    SELECT id, name, is_current, start_date, end_date, initial_remanente, created_at
+    FROM academic_years
+    WHERE is_current = 1
+    LIMIT 1
+  `).get() as unknown as AcademicYear | undefined;
+
+  if (!year) {
+    const fallback = db.prepare(`SELECT * FROM academic_years ORDER BY id DESC LIMIT 1`).get() as unknown as AcademicYear;
+    return toPlain(fallback);
+  }
+  return toPlain(year);
+}
+
+export function getBankAccounts(): BankAccount[] {
+  const db = getDb();
+  const accounts = db.prepare(`
+    SELECT id, name, code, account_number, description, initial_balance, created_at
+    FROM bank_accounts
+    ORDER BY code ASC
+  `).all() as unknown as BankAccount[];
+
+  const mapped = accounts.map(acc => {
+    const totals = db.prepare(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'INGRESO' THEN amount ELSE -amount END), 0) as netMovements,
+        COALESCE(SUM(CASE WHEN is_reconciled = 1 THEN (CASE WHEN type = 'INGRESO' THEN amount ELSE -amount END) ELSE 0 END), 0) as netReconciled,
+        COALESCE(SUM(CASE WHEN is_reconciled = 0 THEN 1 ELSE 0 END), 0) as pendingCount
+      FROM movements
+      WHERE bank_account_id = ?
+    `).get(acc.id) as unknown as { netMovements: number; netReconciled: number; pendingCount: number };
+
+    return {
+      ...acc,
+      current_balance: acc.initial_balance + totals.netMovements,
+      reconciled_balance: acc.initial_balance + totals.netReconciled,
+      pending_movements_count: totals.pendingCount
+    };
+  });
+
+  return toPlain(mapped);
+}
+
+export function getBankAccountById(id: string): BankAccount | null {
+  const db = getDb();
+  const acc = db.prepare(`
+    SELECT id, name, code, account_number, description, initial_balance, created_at
+    FROM bank_accounts
+    WHERE id = ?
+  `).get(id) as unknown as BankAccount | undefined;
+
+  if (!acc) return null;
+
+  const totals = db.prepare(`
+    SELECT 
+      COALESCE(SUM(CASE WHEN type = 'INGRESO' THEN amount ELSE -amount END), 0) as netMovements,
+      COALESCE(SUM(CASE WHEN is_reconciled = 1 THEN (CASE WHEN type = 'INGRESO' THEN amount ELSE -amount END) ELSE 0 END), 0) as netReconciled,
+      COALESCE(SUM(CASE WHEN is_reconciled = 0 THEN 1 ELSE 0 END), 0) as pendingCount
+    FROM movements
+    WHERE bank_account_id = ?
+  `).get(acc.id) as unknown as { netMovements: number; netReconciled: number; pendingCount: number };
+
+  return toPlain({
+    ...acc,
+    current_balance: acc.initial_balance + totals.netMovements,
+    reconciled_balance: acc.initial_balance + totals.netReconciled,
+    pending_movements_count: totals.pendingCount
+  });
+}
+
+export function getBudgetPartidas(academicYearId?: string): BudgetPartida[] {
+  const db = getDb();
+  const yearId = academicYearId || getCurrentAcademicYear().id;
+
+  const partidas = db.prepare(`
+    SELECT id, academic_year_id, code, name, is_base, initial_budget, description, created_at
+    FROM budget_partidas
+    WHERE academic_year_id = ?
+    ORDER BY is_base DESC, code ASC
+  `).all(yearId) as unknown as BudgetPartida[];
+
+  const mapped = partidas.map(p => {
+    const totals = db.prepare(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'INGRESO' THEN amount ELSE 0 END), 0) as totalIncome,
+        COALESCE(SUM(CASE WHEN type = 'GASTO' THEN amount ELSE 0 END), 0) as totalExpenses
+      FROM movements
+      WHERE partida_id = ? AND academic_year_id = ?
+    `).get(p.id, yearId) as unknown as { totalIncome: number; totalExpenses: number };
+
+    const allocated_income = totals.totalIncome;
+    const spent_amount = totals.totalExpenses;
+    const available_balance = p.initial_budget + allocated_income - spent_amount;
+
+    return {
+      ...p,
+      allocated_income,
+      spent_amount,
+      available_balance
+    };
+  });
+
+  return toPlain(mapped);
+}
+
+export function getIncomeCategories(): Category[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT id, parent_id, code, name, is_group
+    FROM income_categories
+    ORDER BY code ASC
+  `).all() as unknown as Category[];
+  return toPlain(rows);
+}
+
+export function getExpenseCategories(): Category[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT id, parent_id, code, name, is_group
+    FROM expense_categories
+    ORDER BY CAST(code AS REAL) ASC, code ASC
+  `).all() as unknown as Category[];
+  return toPlain(rows);
+}
+
+export interface MovementFilterParams {
+  bankAccountId?: string;
+  academicYearId?: string;
+  isReconciled?: number; // 0 o 1
+  type?: 'INGRESO' | 'GASTO';
+  partidaId?: string;
+  searchTerm?: string;
+}
+
+export function getMovements(filters: MovementFilterParams = {}): Movement[] {
+  const db = getDb();
+  const yearId = filters.academicYearId || getCurrentAcademicYear().id;
+
+  let query = `
+    SELECT 
+      m.id, m.bank_account_id, m.academic_year_id, m.date, m.type, m.concept,
+      m.amount, m.partida_id, m.income_category_id, m.expense_category_id,
+      m.is_reconciled, m.reconciled_date, m.reference_doc, m.notes, m.created_at,
+      b.name as account_name, b.code as account_code,
+      p.name as partida_name,
+      COALESCE(ic.name, ec.name) as category_name,
+      COALESCE(ic.code, ec.code) as category_code
+    FROM movements m
+    JOIN bank_accounts b ON m.bank_account_id = b.id
+    LEFT JOIN budget_partidas p ON m.partida_id = p.id
+    LEFT JOIN income_categories ic ON m.income_category_id = ic.id
+    LEFT JOIN expense_categories ec ON m.expense_category_id = ec.id
+    WHERE m.academic_year_id = ?
+  `;
+
+  const params: (string | number)[] = [yearId];
+
+  if (filters.bankAccountId) {
+    query += ' AND m.bank_account_id = ?';
+    params.push(filters.bankAccountId);
+  }
+
+  if (filters.isReconciled !== undefined) {
+    query += ' AND m.is_reconciled = ?';
+    params.push(filters.isReconciled);
+  }
+
+  if (filters.type) {
+    query += ' AND m.type = ?';
+    params.push(filters.type);
+  }
+
+  if (filters.partidaId) {
+    query += ' AND m.partida_id = ?';
+    params.push(filters.partidaId);
+  }
+
+  if (filters.searchTerm) {
+    query += ' AND (m.concept LIKE ? OR m.reference_doc LIKE ? OR m.notes LIKE ?)';
+    const like = `%${filters.searchTerm}%`;
+    params.push(like, like, like);
+  }
+
+  query += ' ORDER BY m.date DESC, m.created_at DESC';
+
+  const rows = db.prepare(query).all(...params) as unknown as Movement[];
+  return toPlain(rows);
+}
+
+export function getDashboardStats(academicYearId?: string): DashboardStats {
+  const currentYear = academicYearId ? { id: academicYearId } : getCurrentAcademicYear();
+  const accounts = getBankAccounts();
+  const yearId = currentYear.id;
+
+  const db = getDb();
+  const totals = db.prepare(`
+    SELECT 
+      COALESCE(SUM(CASE WHEN type = 'INGRESO' THEN amount ELSE 0 END), 0) as totalIncome,
+      COALESCE(SUM(CASE WHEN type = 'GASTO' THEN amount ELSE 0 END), 0) as totalExpenses,
+      COALESCE(SUM(CASE WHEN is_reconciled = 0 THEN 1 ELSE 0 END), 0) as pendingReconciliation
+    FROM movements
+    WHERE academic_year_id = ?
+  `).get(yearId) as unknown as { totalIncome: number; totalExpenses: number; pendingReconciliation: number };
+
+  const funcAcc = accounts.find(a => a.id === 'funcionamento');
+  const comAcc = accounts.find(a => a.id === 'comedor');
+
+  const totalBalance = accounts.reduce((acc, a) => acc + (a.current_balance || 0), 0);
+  const recentMovements = getMovements({ academicYearId: yearId }).slice(0, 7);
+  const partidasOverview = getBudgetPartidas(yearId);
+
+  return toPlain({
+    totalBalance,
+    totalIncome: totals.totalIncome,
+    totalExpenses: totals.totalExpenses,
+    funcionamentoBalance: funcAcc?.current_balance || 0,
+    comedorBalance: comAcc?.current_balance || 0,
+    pendingReconciliationCount: totals.pendingReconciliation,
+    recentMovements,
+    partidasOverview
+  });
+}
+
+export interface CategoryWithTotal extends Category {
+  totalAmount: number;
+  subcategories?: CategoryWithTotal[];
+}
+
+export function getCategoriesWithTotals(academicYearId?: string): {
+  incomeWithTotals: CategoryWithTotal[];
+  expensesWithTotals: CategoryWithTotal[];
+} {
+  const db = getDb();
+  const yearId = academicYearId || getCurrentAcademicYear().id;
+
+  const incomeCats = getIncomeCategories();
+  const expenseCats = getExpenseCategories();
+
+  // Get total income by category
+  const incomeTotals = db.prepare(`
+    SELECT income_category_id, COALESCE(SUM(amount), 0) as total
+    FROM movements
+    WHERE academic_year_id = ? AND type = 'INGRESO' AND income_category_id IS NOT NULL
+    GROUP BY income_category_id
+  `).all(yearId) as unknown as { income_category_id: string; total: number }[];
+
+  const incomeMap = new Map<string, number>();
+  incomeTotals.forEach(row => incomeMap.set(row.income_category_id, row.total));
+
+  // Category H: "Remanentes do ano anterior"
+  // Esta categoría especial reflicte as dotacións iniciais consolidadas das partidas básicas (Funcionamento + Comedor)
+  // e nunca procede dun movemento nas contas correntes bancarias.
+  const basePartidasSum = db.prepare(`
+    SELECT COALESCE(SUM(initial_budget), 0) as total
+    FROM budget_partidas
+    WHERE academic_year_id = ? AND is_base = 1
+  `).get(yearId) as { total: number };
+
+  const remanenteH = basePartidasSum?.total || 0;
+  incomeMap.set('inc-h', remanenteH);
+
+  // Get total expense by category
+  const expenseTotals = db.prepare(`
+    SELECT expense_category_id, COALESCE(SUM(amount), 0) as total
+    FROM movements
+    WHERE academic_year_id = ? AND type = 'GASTO' AND expense_category_id IS NOT NULL
+    GROUP BY expense_category_id
+  `).all(yearId) as unknown as { expense_category_id: string; total: number }[];
+
+  const expenseMap = new Map<string, number>();
+  expenseTotals.forEach(row => expenseMap.set(row.expense_category_id, row.total));
+
+  // Build tree for income
+  const incomeWithTotals: CategoryWithTotal[] = [];
+  const parentIncomes = incomeCats.filter(c => !c.parent_id);
+
+  parentIncomes.forEach(p => {
+    const subs = incomeCats
+      .filter(c => c.parent_id === p.id)
+      .map(s => ({
+        ...s,
+        totalAmount: incomeMap.get(s.id) || 0
+      }));
+
+    const directTotal = incomeMap.get(p.id) || 0;
+    const subTotal = subs.reduce((sum, s) => sum + s.totalAmount, 0);
+
+    incomeWithTotals.push({
+      ...p,
+      totalAmount: directTotal + subTotal,
+      subcategories: subs.length > 0 ? subs : undefined
+    });
+  });
+
+  // Build tree for expenses
+  const expensesWithTotals: CategoryWithTotal[] = [];
+  const parentExpenses = expenseCats.filter(c => !c.parent_id);
+
+  parentExpenses.forEach(p => {
+    const subs = expenseCats
+      .filter(c => c.parent_id === p.id)
+      .map(s => ({
+        ...s,
+        totalAmount: expenseMap.get(s.id) || 0
+      }));
+
+    const directTotal = expenseMap.get(p.id) || 0;
+    const subTotal = subs.reduce((sum, s) => sum + s.totalAmount, 0);
+
+    expensesWithTotals.push({
+      ...p,
+      totalAmount: directTotal + subTotal,
+      subcategories: subs.length > 0 ? subs : undefined
+    });
+  });
+
+  return toPlain({ incomeWithTotals, expensesWithTotals });
+}
+

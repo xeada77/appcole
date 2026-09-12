@@ -1,0 +1,32 @@
+# Dependencias y logs
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Compilaciones y caché de Next.js
+.next
+out
+build
+coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# Datos persistentes locales (se montan mediante volumen de Docker)
+data
+
+# Control de versiones y archivos de entorno
+.git
+.gitignore
+.env
+.env*.local
+
+# Documentación y configuración local
+README.md
+CLAUDE.md
+AGENTS.md
+DEPLOY.md
+.dockerignore
+Dockerfile*
+docker-compose*.yml
