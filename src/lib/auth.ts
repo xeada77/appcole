@@ -1,7 +1,7 @@
 'use server';
 
 import crypto from 'node:crypto';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getDb } from './db';
 import { verifyPassword, SESSION_COOKIE_NAME, SESSION_MAX_AGE, UserSession } from './auth-crypto';
@@ -19,10 +19,21 @@ export async function createSession(userId: string): Promise<string> {
     VALUES (?, ?, ?)
   `).run(sessionId, userId, expiresAt);
 
+  // Detectar se a petición procede dunha conexión HTTPS (ex: Cloudflare Tunnel)
+  let isHttps = false;
+  try {
+    const headerStore = await headers();
+    const proto = headerStore.get('x-forwarded-proto');
+    const referer = headerStore.get('referer');
+    isHttps = proto === 'https' || (referer ? referer.startsWith('https://') : false);
+  } catch {
+    isHttps = false;
+  }
+
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     sameSite: 'lax',
     maxAge: SESSION_MAX_AGE,
     path: '/',
