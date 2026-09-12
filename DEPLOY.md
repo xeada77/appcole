@@ -82,7 +82,17 @@ Tamén podes acceder localmente dentro da túa rede Wi-Fi/LAN mediante o porto 3
 
 ---
 
-## 5. Actualizacións Futuras
+## 5. Credenciais de Acceso Iniciais
+
+Ao acceder á aplicación solicitaranse as credenciais de inicio de sesión:
+
+
+
+*(Podes pechar a sesión en calquera momento premendo na icona de saída situada na parte inferior da barra lateral).*
+
+---
+
+## 6. Actualizacións Futuras
 
 Cando fagas cambios no código ou descargues novas versións:
 

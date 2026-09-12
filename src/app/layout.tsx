@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
+import AppShell from '@/components/AppShell';
 import { getBankAccounts, getCurrentAcademicYear, getAcademicYears } from '@/lib/queries';
 
 const geistSans = Geist({
@@ -31,10 +32,9 @@ export default function RootLayout({
   return (
     <html lang="gl" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
       <body className="h-full bg-slate-100 text-slate-900 flex antialiased print:h-auto print:bg-white print:block">
-        <Sidebar accounts={accounts} currentYear={currentYear} years={years} />
-        <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto print:h-auto print:overflow-visible print:block">
+        <AppShell sidebar={<Sidebar accounts={accounts} currentYear={currentYear} years={years} />}>
           {children}
-        </div>
+        </AppShell>
       </body>
     </html>
   );

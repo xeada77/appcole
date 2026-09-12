@@ -10,10 +10,13 @@ import {
   FileSpreadsheet, 
   School,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  LogOut,
+  User
 } from 'lucide-react';
 import { BankAccount, AcademicYear } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { logoutAction } from '@/lib/auth';
 import YearSelector from './YearSelector';
 import BackupModal from './BackupModal';
 
@@ -182,9 +185,31 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
         </div>
       </div>
 
+      {/* User & Logout Section */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-900/90 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-8 w-8 rounded-lg bg-indigo-950/80 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
+            <User className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-slate-200 truncate">Luis Martínez</p>
+            <p className="text-[10px] text-slate-400 truncate">luismartq@gmail.com</p>
+          </div>
+        </div>
+        <form action={logoutAction} className="shrink-0">
+          <button
+            type="submit"
+            title="Pechar sesión"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </form>
+      </div>
+
       {/* Footer Info */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/90 text-center">
-        <p className="text-[10px] text-slate-500">Consellería de Educación - Xunta de Galicia</p>
+      <div className="px-3 py-2 border-t border-slate-800/40 bg-slate-950 text-center">
+        <p className="text-[9px] text-slate-500">Consellería de Educación · Xunta de Galicia</p>
       </div>
     </aside>
   );

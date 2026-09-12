@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
+import { hashPassword } from './auth-crypto';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DB_DIR, 'appcole.db');
@@ -109,6 +110,23 @@ function initSchema(db: DatabaseSync) {
       FOREIGN KEY (partida_id) REFERENCES budget_partidas(id) ON DELETE SET NULL,
       FOREIGN KEY (income_category_id) REFERENCES income_categories(id) ON DELETE SET NULL,
       FOREIGN KEY (expense_category_id) REFERENCES expense_categories(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      password_hash TEXT NOT NULL,
+      salt TEXT NOT NULL,
+      name TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `);
 
@@ -327,6 +345,20 @@ function seedInitialData(db: DatabaseSync) {
       'part-com-2026', null, 'exp-14', 0,
       null, 'FAC-MENAXE-44', 'Pendente de cargo no banco'
     );
+  }
+
+  // Sembrar usuario inicial si no existe
+  try {
+    const userCheck = db.prepare('SELECT COUNT(*) as count FROM users WHERE email = ?').get('luismartq@gmail.com') as { count: number };
+    if (userCheck.count === 0) {
+      const { hash, salt } = hashPassword('Cole2026!MartQ#9');
+      db.prepare(`
+        INSERT INTO users (id, email, password_hash, salt, name)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('user-luismartq', 'luismartq@gmail.com', hash, salt, 'Luis Martínez');
+    }
+  } catch (err) {
+    console.error('Erro ao semear usuario inicial:', err);
   }
 }
 

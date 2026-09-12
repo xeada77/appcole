@@ -43,3 +43,7 @@ next-env.d.ts
 
 # data
 data/
+
+# Documentación y configuración local
+
+DEPLOY.md
