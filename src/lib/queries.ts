@@ -127,8 +127,8 @@ export function getIncomeCategories(): Category[] {
   const rows = db.prepare(`
     SELECT id, parent_id, code, name, is_group
     FROM income_categories
-    ORDER BY code ASC
   `).all() as unknown as Category[];
+  rows.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
   return toPlain(rows);
 }
 
@@ -137,8 +137,8 @@ export function getExpenseCategories(): Category[] {
   const rows = db.prepare(`
     SELECT id, parent_id, code, name, is_group
     FROM expense_categories
-    ORDER BY CAST(code AS REAL) ASC, code ASC
   `).all() as unknown as Category[];
+  rows.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
   return toPlain(rows);
 }
 
@@ -245,6 +245,27 @@ export interface CategoryWithTotal extends Category {
   subcategories?: CategoryWithTotal[];
 }
 
+function buildCategoryTree(
+  categories: Category[],
+  amountsMap: Map<string, number>,
+  parentId: string | null = null
+): CategoryWithTotal[] {
+  const directChildren = categories.filter(c => c.parent_id === parentId);
+
+  return directChildren.map(cat => {
+    const subcategories = buildCategoryTree(categories, amountsMap, cat.id);
+    const directAmount = amountsMap.get(cat.id) || 0;
+    const subTotal = subcategories.reduce((acc, sub) => acc + sub.totalAmount, 0);
+    const totalAmount = directAmount + subTotal;
+
+    return {
+      ...cat,
+      totalAmount,
+      subcategories: subcategories.length > 0 ? subcategories : undefined
+    };
+  });
+}
+
 export function getCategoriesWithTotals(academicYearId?: string): {
   incomeWithTotals: CategoryWithTotal[];
   expensesWithTotals: CategoryWithTotal[];
@@ -289,50 +310,41 @@ export function getCategoriesWithTotals(academicYearId?: string): {
   const expenseMap = new Map<string, number>();
   expenseTotals.forEach(row => expenseMap.set(row.expense_category_id, row.total));
 
-  // Build tree for income
-  const incomeWithTotals: CategoryWithTotal[] = [];
-  const parentIncomes = incomeCats.filter(c => !c.parent_id);
-
-  parentIncomes.forEach(p => {
-    const subs = incomeCats
-      .filter(c => c.parent_id === p.id)
-      .map(s => ({
-        ...s,
-        totalAmount: incomeMap.get(s.id) || 0
-      }));
-
-    const directTotal = incomeMap.get(p.id) || 0;
-    const subTotal = subs.reduce((sum, s) => sum + s.totalAmount, 0);
-
-    incomeWithTotals.push({
-      ...p,
-      totalAmount: directTotal + subTotal,
-      subcategories: subs.length > 0 ? subs : undefined
-    });
-  });
-
-  // Build tree for expenses
-  const expensesWithTotals: CategoryWithTotal[] = [];
-  const parentExpenses = expenseCats.filter(c => !c.parent_id);
-
-  parentExpenses.forEach(p => {
-    const subs = expenseCats
-      .filter(c => c.parent_id === p.id)
-      .map(s => ({
-        ...s,
-        totalAmount: expenseMap.get(s.id) || 0
-      }));
-
-    const directTotal = expenseMap.get(p.id) || 0;
-    const subTotal = subs.reduce((sum, s) => sum + s.totalAmount, 0);
-
-    expensesWithTotals.push({
-      ...p,
-      totalAmount: directTotal + subTotal,
-      subcategories: subs.length > 0 ? subs : undefined
-    });
-  });
+  // Build recursive tree for income and expenses
+  const incomeWithTotals = buildCategoryTree(incomeCats, incomeMap, null);
+  const expensesWithTotals = buildCategoryTree(expenseCats, expenseMap, null);
 
   return toPlain({ incomeWithTotals, expensesWithTotals });
+}
+
+export interface ComedorReportData {
+  incomeCatA6: CategoryWithTotal | null;
+  expenseCat14: CategoryWithTotal | null;
+  totalIncomeComedor: number;
+  totalExpenseComedor: number;
+  netBalanceComedor: number;
+}
+
+export function getComedorReportData(academicYearId?: string): ComedorReportData {
+  const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(academicYearId);
+
+  // Find a.6: subcategory of 'a'
+  const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
+  const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6') || null;
+
+  // Find 14: root category of expenses
+  const cat14 = expensesWithTotals.find(c => c.code === '14') || null;
+
+  const totalIncomeComedor = catA6?.totalAmount || 0;
+  const totalExpenseComedor = cat14?.totalAmount || 0;
+  const netBalanceComedor = totalIncomeComedor - totalExpenseComedor;
+
+  return toPlain({
+    incomeCatA6: catA6,
+    expenseCat14: cat14,
+    totalIncomeComedor,
+    totalExpenseComedor,
+    netBalanceComedor
+  });
 }
 

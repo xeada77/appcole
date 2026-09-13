@@ -287,14 +287,16 @@ export function generateClearVectorPdf({
       cat.name,
       formatCurrency(cat.totalAmount)
     ]);
-    // Active subcategories
-    cat.subcategories?.filter(s => s.totalAmount > 0).forEach(sub => {
-      expenseRows.push([
-        `   ${sub.code}`,
-        `     |- ${sub.name}`,
-        formatCurrency(sub.totalAmount)
-      ]);
-    });
+    // Active subcategories (excepto a categoría 14 que se desglosa no punto 4)
+    if (cat.code !== '14') {
+      cat.subcategories?.filter(s => s.totalAmount > 0).forEach(sub => {
+        expenseRows.push([
+          `   ${sub.code}`,
+          `     |- ${sub.name}`,
+          formatCurrency(sub.totalAmount)
+        ]);
+      });
+    }
   });
 
   autoTable(doc, {
@@ -332,8 +334,150 @@ export function generateClearVectorPdf({
     }
   });
 
-  // 4. Signatures Section
-  currentY = (doc as any).lastAutoTable.finalY + 8;
+  // 4. Desglose de Comedor Escolar (Categorías a.6 e 14)
+  currentY = (doc as any).lastAutoTable.finalY + 7;
+  if (currentY > pageHeight - 90) {
+    doc.addPage();
+    drawDocumentHeader();
+    currentY = 32;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text('4. DESGLOSE DE EXECUCIÓN DE COMEDOR ESCOLAR (CATEGORÍAS a.6 E 14)', margin, currentY);
+
+  // Buscar a.6 e 14
+  const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
+  const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
+  const cat14 = expensesWithTotals.find(c => c.code === '14');
+
+  // Táboa 4.A: Ingresos Comedor a.6
+  const a6Rows: any[] = [];
+  catA6?.subcategories?.forEach(sub => {
+    a6Rows.push([
+      sub.code,
+      sub.name,
+      formatCurrency(sub.totalAmount)
+    ]);
+  });
+
+  autoTable(doc, {
+    startY: currentY + 2,
+    margin: { left: margin, right: margin },
+    head: [['Cód.', 'Ingresos Comedor Escolar (Categoría a.6)', 'Total Imputado']],
+    body: a6Rows.length > 0 ? a6Rows : [['-', 'Sen movementos rexistrados en a.6', formatCurrency(0)]],
+    foot: [['TOTAL INGRESOS (a.6):', '', formatCurrency(catA6?.totalAmount || 0)]],
+    theme: 'grid',
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.5,
+      textColor: [30, 41, 59],
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
+      font: 'helvetica'
+    },
+    headStyles: {
+      fillColor: [180, 83, 9], // Amber-700
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 7.5
+    },
+    footStyles: {
+      fillColor: [254, 243, 199], // Amber-100
+      textColor: [146, 64, 14],
+      fontStyle: 'bold',
+      halign: 'right',
+      fontSize: 8
+    },
+    columnStyles: {
+      0: { cellWidth: 16, halign: 'left', fontStyle: 'bold' },
+      1: { cellWidth: 138 },
+      2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
+    }
+  });
+
+  // Táboa 4.B: Gastos Comedor 14
+  currentY = (doc as any).lastAutoTable.finalY + 5;
+  if (currentY > pageHeight - 80) {
+    doc.addPage();
+    drawDocumentHeader();
+    currentY = 32;
+  }
+
+  const exp14Rows: any[] = [];
+  cat14?.subcategories?.forEach(sub => {
+    if (sub.is_group === 1 && sub.subcategories && sub.subcategories.length > 0) {
+      exp14Rows.push([
+        sub.code,
+        `${sub.name} (Subtotal)`,
+        formatCurrency(sub.totalAmount)
+      ]);
+      sub.subcategories.forEach(subsub => {
+        exp14Rows.push([
+          `   ${subsub.code}`,
+          `     |- ${subsub.name}`,
+          formatCurrency(subsub.totalAmount)
+        ]);
+      });
+    } else {
+      exp14Rows.push([
+        sub.code,
+        sub.name,
+        formatCurrency(sub.totalAmount)
+      ]);
+    }
+  });
+
+  autoTable(doc, {
+    startY: currentY,
+    margin: { left: margin, right: margin },
+    head: [['Cód.', 'Gastos Comedor Escolar (Categoría 14)', 'Total Executado']],
+    body: exp14Rows.length > 0 ? exp14Rows : [['-', 'Sen movementos rexistrados en 14', formatCurrency(0)]],
+    foot: [['TOTAL GASTOS (14):', '', formatCurrency(cat14?.totalAmount || 0)]],
+    theme: 'grid',
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.5,
+      textColor: [30, 41, 59],
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
+      font: 'helvetica'
+    },
+    headStyles: {
+      fillColor: [159, 18, 57], // Rose-800
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 7.5
+    },
+    footStyles: {
+      fillColor: [255, 241, 242], // Rose-50
+      textColor: [159, 18, 57],
+      fontStyle: 'bold',
+      halign: 'right',
+      fontSize: 8
+    },
+    columnStyles: {
+      0: { cellWidth: 16, halign: 'left', fontStyle: 'bold' },
+      1: { cellWidth: 138 },
+      2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
+    }
+  });
+
+  // Liña resumo de Saldo Neto Comedor
+  currentY = (doc as any).lastAutoTable.finalY + 4;
+  const netComedor = (catA6?.totalAmount || 0) - (cat14?.totalAmount || 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text(
+    `* Saldo Neto Comedor Escolar (Ingresos a.6 - Gastos 14): ${formatCurrency(netComedor)}`,
+    margin,
+    currentY
+  );
+
+  // 5. Signatures Section
+  currentY = currentY + 8;
   if (currentY > pageHeight - 35) {
     doc.addPage();
     drawDocumentHeader();

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Printer, School, ArrowUpRight, ArrowDownRight, FileDown, Loader2 } from 'lucide-react';
+import { Fragment, useState, useRef } from 'react';
+import { Printer, School, ArrowUpRight, ArrowDownRight, FileDown, Loader2, Utensils } from 'lucide-react';
 import { BankAccount, BudgetPartida, AcademicYear } from '@/lib/types';
 import { CategoryWithTotal } from '@/lib/queries';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -31,6 +31,11 @@ export default function InformesView({
 
   const totalIncomeCats = incomeWithTotals.reduce((s, c) => s + c.totalAmount, 0);
   const totalExpenseCats = expensesWithTotals.reduce((s, c) => s + c.totalAmount, 0);
+
+  // Categorías específicas de Comedor Escolar para o Punto 4
+  const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
+  const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
+  const cat14 = expensesWithTotals.find(c => c.code === '14');
 
   const handleGeneratePdf = async () => {
     if (isGeneratingPdf) return;
@@ -338,7 +343,10 @@ export default function InformesView({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {expensesWithTotals.map(cat => {
-                      const activeSubs = cat.subcategories?.filter(s => s.totalAmount > 0) || [];
+                      // Non desglosar a categoría 14 no Punto 3
+                      const activeSubs = cat.code === '14'
+                        ? []
+                        : (cat.subcategories?.filter(s => s.totalAmount > 0) || []);
                       const hasAmount = cat.totalAmount > 0;
                       return (
                         <tr key={cat.id} className={hasAmount ? 'bg-rose-50/20' : 'hover:bg-slate-50/60'}>
@@ -380,6 +388,212 @@ export default function InformesView({
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Desglose de Execución de Comedor Escolar (Ingresos a.6 e Gastos 14) */}
+        <section className="space-y-4 print-avoid-break">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 pb-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+              <span className="h-2 w-2 bg-amber-500 rounded-full"></span>
+              <span>4. Desglose de Execución de Comedor Escolar</span>
+            </h3>
+            <span className="text-[11px] text-slate-500 font-medium">
+              Detalle orzamentario exclusivo das categorías oficiais de Comedor Escolar (Ingresos a.6 e Gastos 14)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 print:grid-cols-2 gap-6 items-start">
+            {/* Táboa de Ingresos Comedor Escolar (a.6) */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="bg-amber-50/80 px-3.5 py-2.5 border-b border-amber-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-950 uppercase tracking-wide flex items-center gap-1.5">
+                  <Utensils className="h-4 w-4 text-amber-600" />
+                  Ingresos Comedor Escolar (Categoría a.6)
+                </span>
+                <span className="text-xs font-black text-amber-800 font-mono">
+                  {formatCurrency(catA6?.totalAmount || 0)}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 text-slate-700 font-bold uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="p-2.5 w-16 text-center">Cód.</th>
+                      <th className="p-2.5">Subconcepto de Ingreso</th>
+                      <th className="p-2.5 text-right w-32">Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {catA6?.subcategories && catA6.subcategories.length > 0 ? (
+                      catA6.subcategories.map(sub => {
+                        const hasAmount = sub.totalAmount > 0;
+                        return (
+                          <tr key={sub.id} className={hasAmount ? 'bg-amber-50/30 font-medium' : 'hover:bg-slate-50/60'}>
+                            <td className="p-2.5 font-mono text-center font-bold text-slate-600">
+                              {sub.code}
+                            </td>
+                            <td className="p-2.5 text-slate-800">
+                              {sub.name}
+                            </td>
+                            <td className={`p-2.5 text-right font-mono whitespace-nowrap ${
+                              hasAmount ? 'font-bold text-emerald-700' : 'text-slate-400'
+                            }`}>
+                              {formatCurrency(sub.totalAmount)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center text-slate-400">
+                          Non hai subcategorías rexistradas en a.6
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot className="bg-amber-50/50 font-bold border-t border-amber-200">
+                    <tr>
+                      <td colSpan={2} className="p-2.5 text-amber-950 uppercase text-right pr-4">Total Ingresos Comedor (a.6):</td>
+                      <td className="p-2.5 text-right text-emerald-700 font-black font-mono">
+                        {formatCurrency(catA6?.totalAmount || 0)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Táboa de Gastos Comedor Escolar (14) */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="bg-rose-50/80 px-3.5 py-2.5 border-b border-rose-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-rose-950 uppercase tracking-wide flex items-center gap-1.5">
+                  <Utensils className="h-4 w-4 text-rose-600" />
+                  Gastos Comedor Escolar (Categoría 14)
+                </span>
+                <span className="text-xs font-black text-rose-800 font-mono">
+                  {formatCurrency(cat14?.totalAmount || 0)}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 text-slate-700 font-bold uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="p-2.5 w-16 text-center">Cód.</th>
+                      <th className="p-2.5">Subconcepto de Gasto</th>
+                      <th className="p-2.5 text-right w-32">Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {cat14?.subcategories && cat14.subcategories.length > 0 ? (
+                      cat14.subcategories.map(sub => {
+                        const isGroup = sub.is_group === 1;
+                        const hasSubSubs = sub.subcategories && sub.subcategories.length > 0;
+                        const hasAmount = sub.totalAmount > 0;
+
+                        if (isGroup && hasSubSubs) {
+                          return (
+                            <Fragment key={sub.id}>
+                              <tr className="bg-slate-100/80 font-semibold text-slate-900 border-t border-slate-200">
+                                <td className="p-2.5 font-mono text-center font-bold text-slate-700">
+                                  {sub.code}
+                                </td>
+                                <td className="p-2.5 uppercase text-[11px] tracking-wider text-slate-800 font-bold">
+                                  {sub.name}
+                                </td>
+                                <td className="p-2.5 text-right font-mono font-bold text-slate-700 whitespace-nowrap">
+                                  {formatCurrency(sub.totalAmount)}
+                                </td>
+                              </tr>
+                              {sub.subcategories!.map(subsub => {
+                                const subHasAmount = subsub.totalAmount > 0;
+                                return (
+                                  <tr key={subsub.id} className={subHasAmount ? 'bg-rose-50/25' : 'hover:bg-slate-50/60'}>
+                                    <td className="p-2 pl-4 font-mono text-center text-slate-500 text-[11px]">
+                                      {subsub.code}
+                                    </td>
+                                    <td className="p-2 pl-6 text-slate-700">
+                                      <span className="text-slate-400 mr-1.5">↳</span>
+                                      {subsub.name}
+                                    </td>
+                                    <td className={`p-2 text-right font-mono whitespace-nowrap ${
+                                      subHasAmount ? 'font-bold text-rose-700' : 'text-slate-400'
+                                    }`}>
+                                      {formatCurrency(subsub.totalAmount)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </Fragment>
+                          );
+                        }
+
+                        return (
+                          <tr key={sub.id} className={hasAmount ? 'bg-rose-50/25 font-medium' : 'hover:bg-slate-50/60'}>
+                            <td className="p-2.5 font-mono text-center font-bold text-slate-600">
+                              {sub.code}
+                            </td>
+                            <td className="p-2.5 text-slate-800">
+                              {sub.name}
+                            </td>
+                            <td className={`p-2.5 text-right font-mono whitespace-nowrap ${
+                              hasAmount ? 'font-bold text-rose-700' : 'text-slate-400'
+                            }`}>
+                              {formatCurrency(sub.totalAmount)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center text-slate-400">
+                          Non hai subcategorías rexistradas en 14
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot className="bg-rose-50/50 font-bold border-t border-rose-200">
+                    <tr>
+                      <td colSpan={2} className="p-2.5 text-rose-950 uppercase text-right pr-4">Total Gastos Comedor (14):</td>
+                      <td className="p-2.5 text-right text-rose-700 font-black font-mono">
+                        {formatCurrency(cat14?.totalAmount || 0)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Tarxeta de Resumo de Balance Neto de Comedor Escolar */}
+          <div className="bg-gradient-to-r from-amber-50 via-slate-50 to-rose-50 border border-slate-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                <Utensils className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">Balance Económico Comedor Escolar (a.6 - 14)</h4>
+                <p className="text-[11px] text-slate-500">Superávit ou déficit derivado da execución orzamentaria propia do servizo de comedor</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Ingresos a.6</span>
+                <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(catA6?.totalAmount || 0)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Gastos 14</span>
+                <span className="font-mono font-bold text-rose-700 text-xs">{formatCurrency(cat14?.totalAmount || 0)}</span>
+              </div>
+              <div className="text-right pl-4 border-l border-slate-300">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Saldo Neto Comedor</span>
+                <span className={`font-mono font-black text-sm ${
+                  ((catA6?.totalAmount || 0) - (cat14?.totalAmount || 0)) >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                }`}>
+                  {formatCurrency((catA6?.totalAmount || 0) - (cat14?.totalAmount || 0))}
+                </span>
               </div>
             </div>
           </div>

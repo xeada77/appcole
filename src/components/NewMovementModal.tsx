@@ -243,27 +243,35 @@ export default function NewMovementModal({
                       {type === 'INGRESO' ? (
                         incomeCategories
                           .filter(cat => cat.code.toLowerCase() !== 'h' && cat.id !== 'inc-h')
-                          .map(cat => (
+                          .map(cat => {
+                            const depth = (cat.code.match(/\./g) || []).length;
+                            const indent = '\u00A0\u00A0'.repeat(depth);
+                            return (
+                              <option 
+                                key={cat.id} 
+                                value={cat.id}
+                                disabled={cat.is_group === 1}
+                                className={cat.is_group === 1 ? 'font-bold bg-slate-100 text-slate-500' : ''}
+                              >
+                                {indent}{cat.code}) {cat.name} {cat.is_group === 1 ? '(Grupo)' : ''}
+                              </option>
+                            );
+                          })
+                      ) : (
+                        expenseCategories.map(cat => {
+                          const depth = (cat.code.match(/\./g) || []).length;
+                          const indent = '\u00A0\u00A0'.repeat(depth);
+                          return (
                             <option 
                               key={cat.id} 
                               value={cat.id}
                               disabled={cat.is_group === 1}
                               className={cat.is_group === 1 ? 'font-bold bg-slate-100 text-slate-500' : ''}
                             >
-                              {cat.code}) {cat.name}
+                              {indent}{cat.code}.- {cat.name} {cat.is_group === 1 ? '(Grupo)' : ''}
                             </option>
-                          ))
-                      ) : (
-                        expenseCategories.map(cat => (
-                          <option 
-                            key={cat.id} 
-                            value={cat.id}
-                            disabled={cat.is_group === 1}
-                            className={cat.is_group === 1 ? 'font-bold bg-slate-100 text-slate-500' : ''}
-                          >
-                            {cat.code}.- {cat.name}
-                          </option>
-                        ))
+                          );
+                        })
                       )}
                     </select>
                   </div>

@@ -109,14 +109,31 @@ export default async function CategoriasPage() {
                   {cat.subcategories && cat.subcategories.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-100 pl-4 space-y-2">
                       {cat.subcategories.map((sub) => (
-                        <div key={sub.id} className="flex items-center justify-between text-xs py-1 px-2 rounded hover:bg-slate-50">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold text-slate-500">{sub.code}</span>
-                            <span className="text-slate-700">{sub.name}</span>
+                        <div key={sub.id} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs py-1 px-2 rounded hover:bg-slate-50">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-semibold text-slate-500">{sub.code}</span>
+                              <span className={sub.subcategories ? "font-semibold text-slate-800" : "text-slate-700"}>{sub.name}</span>
+                            </div>
+                            <span className={`font-semibold ${sub.totalAmount > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {formatCurrency(sub.totalAmount)}
+                            </span>
                           </div>
-                          <span className={`font-semibold ${sub.totalAmount > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
-                            {formatCurrency(sub.totalAmount)}
-                          </span>
+                          {sub.subcategories && sub.subcategories.length > 0 && (
+                            <div className="pl-6 space-y-1 border-l border-emerald-200 ml-3">
+                              {sub.subcategories.map((subsub) => (
+                                <div key={subsub.id} className="flex items-center justify-between text-[11px] py-0.5 px-2 rounded hover:bg-slate-50">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-slate-400">{subsub.code}</span>
+                                    <span className="text-slate-600">{subsub.name}</span>
+                                  </div>
+                                  <span className={`font-medium ${subsub.totalAmount > 0 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                                    {formatCurrency(subsub.totalAmount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -169,18 +186,35 @@ export default async function CategoriasPage() {
                     </span>
                   </div>
 
-                  {/* Subcategories (e.g. Subministracións: Gasóleo, Gas, Biomasa, Electricidade, Auga, Outras) */}
+                  {/* Subcategories (e.g. Subministracións, Comedores escolares) */}
                   {cat.subcategories && cat.subcategories.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-100 pl-4 space-y-2">
                       {cat.subcategories.map((sub) => (
-                        <div key={sub.id} className="flex items-center justify-between text-xs py-1 px-2 rounded hover:bg-slate-50">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold text-slate-500">{sub.code}</span>
-                            <span className="text-slate-700">{sub.name}</span>
+                        <div key={sub.id} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs py-1 px-2 rounded hover:bg-slate-50">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-semibold text-slate-500">{sub.code}</span>
+                              <span className={sub.subcategories ? "font-semibold text-slate-800" : "text-slate-700"}>{sub.name}</span>
+                            </div>
+                            <span className={`font-semibold ${sub.totalAmount > 0 ? 'text-rose-700' : 'text-slate-400'}`}>
+                              {formatCurrency(sub.totalAmount)}
+                            </span>
                           </div>
-                          <span className={`font-semibold ${sub.totalAmount > 0 ? 'text-rose-700' : 'text-slate-400'}`}>
-                            {formatCurrency(sub.totalAmount)}
-                          </span>
+                          {sub.subcategories && sub.subcategories.length > 0 && (
+                            <div className="pl-6 space-y-1 border-l border-rose-200 ml-3">
+                              {sub.subcategories.map((subsub) => (
+                                <div key={subsub.id} className="flex items-center justify-between text-[11px] py-0.5 px-2 rounded hover:bg-slate-50">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-slate-400">{subsub.code}</span>
+                                    <span className="text-slate-600">{subsub.name}</span>
+                                  </div>
+                                  <span className={`font-medium ${subsub.totalAmount > 0 ? 'text-rose-700 font-semibold' : 'text-slate-400'}`}>
+                                    {formatCurrency(subsub.totalAmount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -137,6 +137,61 @@ function initSchema(db: DatabaseSync) {
     // Column already exists
   }
 
+  // Safe migration: Subcategorías de Comedor Escolar (Ingresos a.6 e Gastos 14)
+  try {
+    // Actualizar grupos raiz a is_group = 1
+    db.prepare(`UPDATE income_categories SET is_group = 1 WHERE id = 'inc-a.6'`).run();
+    db.prepare(`UPDATE expense_categories SET is_group = 1 WHERE id = 'exp-14'`).run();
+
+    const insertIncCat = db.prepare(`
+      INSERT INTO income_categories (id, parent_id, code, name, is_group)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET parent_id=excluded.parent_id, code=excluded.code, name=excluded.name, is_group=excluded.is_group
+    `);
+
+    const incomeSubs = [
+      { id: 'inc-a.6.1', parent_id: 'inc-a.6', code: 'a.6.1', name: 'Remanente incorporado', is_group: 0 },
+      { id: 'inc-a.6.2', parent_id: 'inc-a.6', code: 'a.6.2', name: 'Prezo do servizo', is_group: 0 },
+      { id: 'inc-a.6.3', parent_id: 'inc-a.6', code: 'a.6.3', name: 'Ingreso da Conselleria de EOU', is_group: 0 },
+      { id: 'inc-a.6.4', parent_id: 'inc-a.6', code: 'a.6.4', name: 'Recursos complementarios', is_group: 0 },
+      { id: 'inc-a.6.5', parent_id: 'inc-a.6', code: 'a.6.5', name: 'Intereses da conta', is_group: 0 },
+    ];
+    for (const cat of incomeSubs) {
+      insertIncCat.run(cat.id, cat.parent_id, cat.code, cat.name, cat.is_group);
+    }
+
+    const insertExpCat = db.prepare(`
+      INSERT INTO expense_categories (id, parent_id, code, name, is_group)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET parent_id=excluded.parent_id, code=excluded.code, name=excluded.name, is_group=excluded.is_group
+    `);
+
+    const expenseSubs = [
+      { id: 'exp-14.1', parent_id: 'exp-14', code: '14.1', name: 'Adquisicións', is_group: 0 },
+      { id: 'exp-14.2', parent_id: 'exp-14', code: '14.2', name: 'Materiais', is_group: 1 },
+      { id: 'exp-14.2.1', parent_id: 'exp-14.2', code: '14.2.1', name: 'Servilletas-Manteis', is_group: 0 },
+      { id: 'exp-14.2.2', parent_id: 'exp-14.2', code: '14.2.2', name: 'Produtos de limpeza', is_group: 0 },
+      { id: 'exp-14.2.3', parent_id: 'exp-14.2', code: '14.2.3', name: 'Panos e roupa de cocina', is_group: 0 },
+      { id: 'exp-14.2.4', parent_id: 'exp-14.2', code: '14.2.4', name: 'Menaxe de cocina e comedor', is_group: 0 },
+      { id: 'exp-14.3', parent_id: 'exp-14', code: '14.3', name: 'Subministracións', is_group: 1 },
+      { id: 'exp-14.3.1', parent_id: 'exp-14.3', code: '14.3.1', name: 'Compra de alimentos', is_group: 0 },
+      { id: 'exp-14.3.2', parent_id: 'exp-14.3', code: '14.3.2', name: 'Enerxia electrica', is_group: 0 },
+      { id: 'exp-14.3.3', parent_id: 'exp-14.3', code: '14.3.3', name: 'Gas propano', is_group: 0 },
+      { id: 'exp-14.4', parent_id: 'exp-14', code: '14.4', name: 'Gastos diversos', is_group: 0 },
+      { id: 'exp-14.5', parent_id: 'exp-14', code: '14.5', name: 'Traballos', is_group: 0 },
+    ];
+    for (const cat of expenseSubs) {
+      insertExpCat.run(cat.id, cat.parent_id, cat.code, cat.name, cat.is_group);
+    }
+
+    // Actualizar movementos de exemplo existentes se aínda tiñan categorías xenéricas
+    db.prepare(`UPDATE movements SET income_category_id = 'inc-a.6.3' WHERE id = 'mov-006' AND income_category_id = 'inc-a.6'`).run();
+    db.prepare(`UPDATE movements SET expense_category_id = 'exp-14.3.1' WHERE id = 'mov-008' AND expense_category_id = 'exp-14'`).run();
+    db.prepare(`UPDATE movements SET expense_category_id = 'exp-14.2.4' WHERE id = 'mov-009' AND expense_category_id = 'exp-14'`).run();
+  } catch (err) {
+    console.error('Erro na migración de subcategorías de comedor:', err);
+  }
+
   seedInitialData(db);
 
   // Sync initial_remanente for any existing years from base partidas
@@ -226,7 +281,12 @@ function seedInitialData(db: DatabaseSync) {
     insertIncomeCat.run('inc-a.3', 'inc-a', 'a.3', 'Dotacións Biblioteca', 0);
     insertIncomeCat.run('inc-a.4', 'inc-a', 'a.4', 'Fondos Plan de Mellora', 0);
     insertIncomeCat.run('inc-a.5', 'inc-a', 'a.5', 'Fondos proxectos de OIE', 0);
-    insertIncomeCat.run('inc-a.6', 'inc-a', 'a.6', 'Comedores escolares', 0);
+    insertIncomeCat.run('inc-a.6', 'inc-a', 'a.6', 'Comedores escolares', 1);
+    insertIncomeCat.run('inc-a.6.1', 'inc-a.6', 'a.6.1', 'Remanente incorporado', 0);
+    insertIncomeCat.run('inc-a.6.2', 'inc-a.6', 'a.6.2', 'Prezo do servizo', 0);
+    insertIncomeCat.run('inc-a.6.3', 'inc-a.6', 'a.6.3', 'Ingreso da Conselleria de EOU', 0);
+    insertIncomeCat.run('inc-a.6.4', 'inc-a.6', 'a.6.4', 'Recursos complementarios', 0);
+    insertIncomeCat.run('inc-a.6.5', 'inc-a.6', 'a.6.5', 'Intereses da conta', 0);
     insertIncomeCat.run('inc-a.7', 'inc-a', 'a.7', 'Sen contido neste exercicio', 0);
     insertIncomeCat.run('inc-a.8', 'inc-a', 'a.8', 'Outros', 0);
 
@@ -274,7 +334,21 @@ function seedInitialData(db: DatabaseSync) {
     insertExpenseCat.run('exp-11', null, '11', 'Gastos diversos', 0);
     insertExpenseCat.run('exp-12', null, '12', 'Mobiliario e utensilios inventariables', 0);
     insertExpenseCat.run('exp-13', null, '13', 'Outros materiais inventariables', 0);
-    insertExpenseCat.run('exp-14', null, '14', 'Comedores escolares', 0);
+
+    // 14.- Comedores escolares (Group)
+    insertExpenseCat.run('exp-14', null, '14', 'Comedores escolares', 1);
+    insertExpenseCat.run('exp-14.1', 'exp-14', '14.1', 'Adquisicións', 0);
+    insertExpenseCat.run('exp-14.2', 'exp-14', '14.2', 'Materiais', 1);
+    insertExpenseCat.run('exp-14.2.1', 'exp-14.2', '14.2.1', 'Servilletas-Manteis', 0);
+    insertExpenseCat.run('exp-14.2.2', 'exp-14.2', '14.2.2', 'Produtos de limpeza', 0);
+    insertExpenseCat.run('exp-14.2.3', 'exp-14.2', '14.2.3', 'Panos e roupa de cocina', 0);
+    insertExpenseCat.run('exp-14.2.4', 'exp-14.2', '14.2.4', 'Menaxe de cocina e comedor', 0);
+    insertExpenseCat.run('exp-14.3', 'exp-14', '14.3', 'Subministracións', 1);
+    insertExpenseCat.run('exp-14.3.1', 'exp-14.3', '14.3.1', 'Compra de alimentos', 0);
+    insertExpenseCat.run('exp-14.3.2', 'exp-14.3', '14.3.2', 'Enerxia electrica', 0);
+    insertExpenseCat.run('exp-14.3.3', 'exp-14.3', '14.3.3', 'Gas propano', 0);
+    insertExpenseCat.run('exp-14.4', 'exp-14', '14.4', 'Gastos diversos', 0);
+    insertExpenseCat.run('exp-14.5', 'exp-14', '14.5', 'Traballos', 0);
   }
 
   // Seed sample movements to demonstrate bank reconciliation & budgeting
@@ -324,7 +398,7 @@ function seedInitialData(db: DatabaseSync) {
     insertMovement.run(
       'mov-006', 'comedor', '2026', '2026-01-18', 'INGRESO',
       'Dotación Consellería servizo de comedor escolar', 9250.00,
-      'part-com-2026', 'inc-a.6', null, 1,
+      'part-com-2026', 'inc-a.6.3', null, 1,
       '2026-01-19', 'ORD-COM-01', 'Achega ordinaria primeiro trimestre'
     );
     insertMovement.run(
@@ -336,13 +410,13 @@ function seedInitialData(db: DatabaseSync) {
     insertMovement.run(
       'mov-008', 'comedor', '2026', '2026-02-15', 'GASTO',
       'Servizo de catering e menús escolares - Serunión', 4890.00,
-      'part-com-2026', null, 'exp-14', 1,
+      'part-com-2026', null, 'exp-14.3.1', 1,
       '2026-02-16', 'FAC-SERU-2026-02', 'Menús correspondentes ao mes de febreiro'
     );
     insertMovement.run(
       'mov-009', 'comedor', '2026', '2026-02-28', 'GASTO',
       'Reposición de louza, bandexas e vaixela de comedor', 380.00,
-      'part-com-2026', null, 'exp-14', 0,
+      'part-com-2026', null, 'exp-14.2.4', 0,
       null, 'FAC-MENAXE-44', 'Pendente de cargo no banco'
     );
   }
