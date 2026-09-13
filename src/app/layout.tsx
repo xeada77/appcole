@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'AppCole - Xestión Económica Escolar',
+  title: 'XecoCole - Xestión Económica Escolar',
   description: 'Aplicación de xestión económica, orzamentos e conciliación bancaria para centros escolares.',
 };
 

@@ -1,21 +1,22 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { 
-  School, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  Loader2, 
-  AlertCircle, 
-  ShieldCheck, 
-  Landmark, 
-  PieChart, 
-  FileSpreadsheet 
+import {
+  School,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  ShieldCheck,
+  Landmark,
+  PieChart,
+  FileSpreadsheet
 } from 'lucide-react';
 import { loginAction } from '@/lib/auth';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, null);
@@ -34,12 +35,21 @@ export default function LoginPage() {
         {/* Cabeceira co Logotipo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3.5 mb-6">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl shadow-indigo-500/25 ring-1 ring-white/20 shrink-0">
-              <School className="h-6 w-6 text-white" />
+            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl shadow-indigo-500/25 ring-1 ring-white/20 shrink-0">
+              <div className="h-20 w-20 rounded-xl bg-white p-1 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 border border-slate-700/50 overflow-hidden">
+                <Image
+                  src="/logoxestion.png"
+                  alt="Logo AppCole"
+                  width={72}
+                  height={72}
+                  className="w-full h-full object-contain"
+                  priority
+                />
+              </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-white">AppCole</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-white">XecoCole</h1>
                 <span className="text-xs font-bold uppercase bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">
                   v16
                 </span>

@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Landmark, 
-  PieChart, 
-  Tags, 
-  FileSpreadsheet, 
-  School,
+import {
+  LayoutDashboard,
+  Landmark,
+  PieChart,
+  Tags,
+  FileSpreadsheet,
   CheckCircle2,
   AlertCircle,
   LogOut,
@@ -72,12 +72,19 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
       {/* Brand Header & Year Selector at TOP */}
       <div className="p-4 border-b border-slate-800/80 bg-slate-900">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-            <School className="h-5 w-5 text-white" />
+          <div className="h-14 w-14 rounded-xl bg-white p-1 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 border border-slate-700/50 overflow-hidden">
+            <Image
+              src="/logoxestion.png"
+              alt="Logo AppCole"
+              width={72}
+              height={72}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold tracking-tight text-white text-lg">AppCole</span>
+              <span className="font-bold tracking-tight text-white text-lg">XecoCole</span>
               <span className="text-[10px] font-semibold uppercase bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">v16</span>
             </div>
             <p className="text-[11px] text-slate-400">Xestión Económica Escolar</p>
@@ -102,11 +109,10 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-semibold'
-                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-              }`}
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-semibold'
+                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                }`}
             >
               <div className="flex items-center gap-3">
                 <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -126,11 +132,11 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
           <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
             Estado das Contas Bancarias
           </div>
-          
+
           <div className="space-y-2.5">
             {/* Funcionamento */}
-            <Link 
-              href="/bancos?conta=funcionamento" 
+            <Link
+              href="/bancos?conta=funcionamento"
               className="block p-3 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-colors group"
             >
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
@@ -152,8 +158,8 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
             </Link>
 
             {/* Comedor */}
-            <Link 
-              href="/bancos?conta=comedor" 
+            <Link
+              href="/bancos?conta=comedor"
               className="block p-3 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-colors group"
             >
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
