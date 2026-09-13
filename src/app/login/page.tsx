@@ -35,17 +35,15 @@ export default function LoginPage() {
         {/* Cabeceira co Logotipo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3.5 mb-6">
-            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl shadow-indigo-500/25 ring-1 ring-white/20 shrink-0">
-              <div className="h-20 w-20 rounded-xl bg-white p-1 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 border border-slate-700/50 overflow-hidden">
-                <Image
-                  src="/logoxestion.png"
-                  alt="Logo AppCole"
-                  width={72}
-                  height={72}
-                  className="w-full h-full object-contain"
-                  priority
-                />
-              </div>
+            <div className="h-16 w-16 rounded-2xl bg-white p-1.5 flex items-center justify-center shadow-xl shadow-indigo-500/25 ring-1 ring-white/20 shrink-0 border border-slate-700/50 overflow-hidden">
+              <Image
+                src="/logoxestion.png"
+                alt="Logo XecoCole"
+                width={64}
+                height={64}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
