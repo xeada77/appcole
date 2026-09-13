@@ -56,10 +56,7 @@ export async function createMovementAction(formData: FormData) {
     notes
   );
 
-  revalidatePath('/');
-  revalidatePath('/bancos');
-  revalidatePath('/partidas');
-  revalidatePath('/conciliacion');
+  revalidatePath('/', 'layout');
   return { success: true, id };
 }
 
@@ -139,9 +136,7 @@ export async function toggleReconciliationAction(movementId: string, newState: b
 
   stmt.run(newState ? 1 : 0, newState ? today : null, movementId);
 
-  revalidatePath('/');
-  revalidatePath('/bancos');
-  revalidatePath('/conciliacion');
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 
@@ -150,10 +145,7 @@ export async function deleteMovementAction(movementId: string) {
   const stmt = db.prepare(`DELETE FROM movements WHERE id = ?`);
   stmt.run(movementId);
 
-  revalidatePath('/');
-  revalidatePath('/bancos');
-  revalidatePath('/partidas');
-  revalidatePath('/conciliacion');
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 
@@ -175,8 +167,7 @@ export async function createBudgetPartidaAction(formData: FormData) {
 
   stmt.run(id, academicYearId, code.toUpperCase(), name, initialBudget, description);
 
-  revalidatePath('/');
-  revalidatePath('/partidas');
+  revalidatePath('/', 'layout');
   return { success: true, id };
 }
 
@@ -193,6 +184,7 @@ export async function updateBudgetPartidaAction(id: string, initialBudget: numbe
 
   stmt.run(initialBudget, description || null, id);
 
+  // Se é unha partida básica (Funcionamento ou Comedor), sincronizar automaticamente o initial_remanente do ano
   if (partida && partida.is_base === 1) {
     const baseSum = db.prepare(`
       SELECT COALESCE(SUM(initial_budget), 0) as total
@@ -202,10 +194,7 @@ export async function updateBudgetPartidaAction(id: string, initialBudget: numbe
     db.prepare(`UPDATE academic_years SET initial_remanente = ? WHERE id = ?`).run(baseSum.total, partida.academic_year_id);
   }
 
-  revalidatePath('/partidas');
-  revalidatePath('/categorias');
-  revalidatePath('/informes');
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 
@@ -221,8 +210,7 @@ export async function deleteBudgetPartidaAction(id: string) {
   db.prepare(`UPDATE movements SET partida_id = NULL WHERE partida_id = ?`).run(id);
   db.prepare(`DELETE FROM budget_partidas WHERE id = ?`).run(id);
 
-  revalidatePath('/partidas');
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 

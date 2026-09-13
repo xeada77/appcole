@@ -10,6 +10,8 @@ import {
   getCategoriesWithTotals 
 } from '@/lib/queries';
 
+export const dynamic = 'force-dynamic';
+
 export default async function InformesPage() {
   const currentYear = getCurrentAcademicYear();
   const years = getAcademicYears();

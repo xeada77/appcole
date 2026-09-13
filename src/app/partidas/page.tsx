@@ -10,6 +10,8 @@ import {
   getAcademicYears 
 } from '@/lib/queries';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PartidasPage() {
   const currentYear = getCurrentAcademicYear();
   const years = getAcademicYears();

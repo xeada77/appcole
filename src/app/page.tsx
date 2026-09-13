@@ -26,6 +26,8 @@ import {
 } from '@/lib/queries';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const currentYear = getCurrentAcademicYear();
   const years = getAcademicYears();

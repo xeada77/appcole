@@ -15,6 +15,8 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'AppCole - Xestión Económica Escolar',
   description: 'Aplicación de xestión económica, orzamentos e conciliación bancaria para centros escolares.',
