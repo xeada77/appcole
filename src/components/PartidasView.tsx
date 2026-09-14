@@ -129,11 +129,20 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
                 </div>
 
                 {/* Numbers & Progress */}
-                <div className="flex items-center gap-6 lg:ml-auto">
-                  <div className="grid grid-cols-3 gap-4 text-right">
+                <div className="flex items-center gap-4 lg:gap-6 lg:ml-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-right">
                     <div>
-                      <span className="text-[11px] text-slate-400 block uppercase">Dotación</span>
+                      <span className="text-[11px] text-slate-400 block uppercase" title="Dotación Inicial">Dot. Inicial</span>
+                      <strong className="text-sm text-slate-700 font-semibold">{formatCurrency(partida.initial_budget)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-slate-400 block uppercase" title="Dotación Total">Dot. Total</span>
                       <strong className="text-sm text-slate-800 font-semibold">{formatCurrency(totalFunds)}</strong>
+                      {(partida.allocated_income || 0) > 0 && (
+                        <span className="text-[10px] text-emerald-600 font-medium block leading-tight">
+                          +{formatCurrency(partida.allocated_income || 0)} ing.
+                        </span>
+                      )}
                     </div>
                     <div>
                       <span className="text-[11px] text-slate-400 block uppercase">Gastado</span>
