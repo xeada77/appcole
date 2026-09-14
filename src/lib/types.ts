@@ -64,6 +64,7 @@ export interface Movement {
   account_name?: string;
   account_code?: string;
   partida_name?: string;
+  partida_year_id?: string;
   category_name?: string;
   category_code?: string;
 }

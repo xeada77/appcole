@@ -104,8 +104,8 @@ export function getBudgetPartidas(academicYearId?: string): BudgetPartida[] {
         COALESCE(SUM(CASE WHEN type = 'INGRESO' THEN amount ELSE 0 END), 0) as totalIncome,
         COALESCE(SUM(CASE WHEN type = 'GASTO' THEN amount ELSE 0 END), 0) as totalExpenses
       FROM movements
-      WHERE partida_id = ? AND academic_year_id = ?
-    `).get(p.id, yearId) as unknown as { totalIncome: number; totalExpenses: number };
+      WHERE partida_id = ?
+    `).get(p.id) as unknown as { totalIncome: number; totalExpenses: number };
 
     const allocated_income = totals.totalIncome;
     const spent_amount = totals.totalExpenses;
@@ -149,6 +149,7 @@ export interface MovementFilterParams {
   type?: 'INGRESO' | 'GASTO';
   partidaId?: string;
   searchTerm?: string;
+  includeImputedPartidas?: boolean;
 }
 
 export function getMovements(filters: MovementFilterParams = {}): Movement[] {
@@ -161,7 +162,7 @@ export function getMovements(filters: MovementFilterParams = {}): Movement[] {
       m.amount, m.partida_id, m.income_category_id, m.expense_category_id,
       m.is_reconciled, m.reconciled_date, m.reference_doc, m.notes, m.created_at,
       b.name as account_name, b.code as account_code,
-      p.name as partida_name,
+      p.name as partida_name, p.academic_year_id as partida_year_id,
       COALESCE(ic.name, ec.name) as category_name,
       COALESCE(ic.code, ec.code) as category_code
     FROM movements m
@@ -169,10 +170,17 @@ export function getMovements(filters: MovementFilterParams = {}): Movement[] {
     LEFT JOIN budget_partidas p ON m.partida_id = p.id
     LEFT JOIN income_categories ic ON m.income_category_id = ic.id
     LEFT JOIN expense_categories ec ON m.expense_category_id = ec.id
-    WHERE m.academic_year_id = ?
   `;
 
-  const params: (string | number)[] = [yearId];
+  const params: (string | number)[] = [];
+
+  if (filters.includeImputedPartidas) {
+    query += ' WHERE (m.academic_year_id = ? OR m.partida_id IN (SELECT id FROM budget_partidas WHERE academic_year_id = ?))';
+    params.push(yearId, yearId);
+  } else {
+    query += ' WHERE m.academic_year_id = ?';
+    params.push(yearId);
+  }
 
   if (filters.bankAccountId) {
     query += ' AND m.bank_account_id = ?';

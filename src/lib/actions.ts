@@ -3,6 +3,8 @@
 import { getDb } from './db';
 import { revalidatePath } from 'next/cache';
 import crypto from 'node:crypto';
+import { getBudgetPartidas } from './queries';
+import { BudgetPartida } from './types';
 
 export async function createMovementAction(formData: FormData) {
   const db = getDb();
@@ -330,5 +332,10 @@ export async function getBackupStatusAction() {
     return { success: false, status: { lastBackupDate: null, totalBackups: 0, backups: [] } };
   }
 }
+
+export async function getPartidasByYearAction(yearId: string): Promise<BudgetPartida[]> {
+  return getBudgetPartidas(yearId);
+}
+
 
 

@@ -208,7 +208,15 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
                           {partidaMovements.map(m => (
                             <tr key={m.id} className="hover:bg-slate-50/70">
                               <td className="px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">
-                                {formatDate(m.date)}
+                                <div>{formatDate(m.date)}</div>
+                                {m.academic_year_id && m.academic_year_id !== currentYearId && (
+                                  <span 
+                                    className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-100 text-amber-800 border border-amber-200"
+                                    title={`Movemento contable executado no exercicio ${m.academic_year_id}`}
+                                  >
+                                    Ano contable {m.academic_year_id}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-4 py-2.5 whitespace-nowrap">
                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${m.bank_account_id === 'comedor' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'

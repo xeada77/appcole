@@ -280,6 +280,7 @@ export default function BankMovementsView({
             incomeCategories={incomeCategories}
             expenseCategories={expenseCategories}
             currentYearId={currentYear.id}
+            years={years}
           />
         </div>
       </div>
@@ -371,7 +372,17 @@ export default function BankMovementsView({
                     </td>
                     <td className="px-5 py-3.5 text-xs text-slate-600">
                       {mov.partida_name && (
-                        <span className="block font-medium text-indigo-700">{mov.partida_name}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="block font-medium text-indigo-700">{mov.partida_name}</span>
+                          {mov.partida_year_id && mov.partida_year_id !== mov.academic_year_id && (
+                            <span 
+                              className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200"
+                              title={`Movemento imputado á partida do ano ${mov.partida_year_id}`}
+                            >
+                              Ano {mov.partida_year_id}
+                            </span>
+                          )}
+                        </div>
                       )}
                       {mov.category_name && (
                         <span className="block text-[11px] text-slate-500">
@@ -423,6 +434,7 @@ export default function BankMovementsView({
           partidas={partidas}
           incomeCategories={incomeCategories}
           expenseCategories={expenseCategories}
+          years={years}
           isOpen={!!editingMovement}
           onClose={() => setEditingMovement(null)}
         />

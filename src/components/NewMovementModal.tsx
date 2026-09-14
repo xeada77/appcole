@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Plus, X, ArrowDownRight, ArrowUpRight, Check, AlertCircle } from 'lucide-react';
-import { BankAccount, BudgetPartida, Category } from '@/lib/types';
-import { createMovementAction } from '@/lib/actions';
+import { BankAccount, BudgetPartida, Category, AcademicYear } from '@/lib/types';
+import { createMovementAction, getPartidasByYearAction } from '@/lib/actions';
 
 interface NewMovementModalProps {
   accounts: BankAccount[];
@@ -11,6 +11,7 @@ interface NewMovementModalProps {
   incomeCategories: Category[];
   expenseCategories: Category[];
   currentYearId: string;
+  years?: AcademicYear[];
 }
 
 export default function NewMovementModal({
@@ -18,10 +19,39 @@ export default function NewMovementModal({
   partidas,
   incomeCategories,
   expenseCategories,
-  currentYearId
+  currentYearId,
+  years
 }: NewMovementModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Find previous years
+  const currentYear = years?.find(y => y.id === currentYearId);
+  const previousYears = (years || [])
+    .filter(y => {
+      if (y.id === currentYearId) return false;
+      if (currentYear?.start_date && y.start_date) {
+        return new Date(y.start_date).getTime() < new Date(currentYear.start_date).getTime();
+      }
+      const currentNum = parseInt(currentYearId, 10);
+      const yNum = parseInt(y.id, 10);
+      if (!isNaN(currentNum) && !isNaN(yNum)) {
+        return yNum < currentNum;
+      }
+      return y.id.localeCompare(currentYearId, undefined, { numeric: true }) < 0;
+    })
+    .sort((a, b) => {
+      if (a.start_date && b.start_date) {
+        return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+      }
+      return b.id.localeCompare(a.id, undefined, { numeric: true });
+    });
+
+  // Previous year imputation states
+  const [imputeToPreviousYear, setImputeToPreviousYear] = useState(false);
+  const [selectedPrevYearId, setSelectedPrevYearId] = useState<string>(previousYears[0]?.id || '');
+  const [prevYearPartidas, setPrevYearPartidas] = useState<BudgetPartida[]>([]);
+  const [isLoadingPrevPartidas, setIsLoadingPrevPartidas] = useState(false);
 
   // Form states
   const [bankAccountId, setBankAccountId] = useState(accounts[0]?.id || 'funcionamento');
@@ -39,14 +69,49 @@ export default function NewMovementModal({
   const [notes, setNotes] = useState('');
   const [isReconciled, setIsReconciled] = useState(false);
 
+  // Function to load previous year's partidas
+  const loadPreviousPartidas = async (yearId: string) => {
+    setIsLoadingPrevPartidas(true);
+    try {
+      const data = await getPartidasByYearAction(yearId);
+      setPrevYearPartidas(data);
+      const match = data.find(p => p.code.toLowerCase().includes(bankAccountId === 'comedor' ? 'com' : 'func'));
+      setPartidaId(match ? match.id : (data[0]?.id || ''));
+    } catch (err) {
+      console.error('Erro ao cargar as partidas do ano anterior:', err);
+    } finally {
+      setIsLoadingPrevPartidas(false);
+    }
+  };
+
+  const handleTogglePreviousYear = (checked: boolean) => {
+    setImputeToPreviousYear(checked);
+    if (checked) {
+      const targetYear = selectedPrevYearId || previousYears[0]?.id;
+      if (targetYear) {
+        setSelectedPrevYearId(targetYear);
+        loadPreviousPartidas(targetYear);
+      }
+    } else {
+      const match = partidas.find(p => p.code.toLowerCase().includes(bankAccountId === 'comedor' ? 'com' : 'func'));
+      setPartidaId(match ? match.id : (partidas[0]?.id || ''));
+    }
+  };
+
+  const handleChangePrevYear = (newYearId: string) => {
+    setSelectedPrevYearId(newYearId);
+    loadPreviousPartidas(newYearId);
+  };
+
   // Sync default partida when account changes
   const handleAccountChange = (newAccId: string) => {
     setBankAccountId(newAccId);
+    const targetPartidas = imputeToPreviousYear ? prevYearPartidas : partidas;
     if (newAccId === 'comedor') {
-      const comPartida = partidas.find(p => p.name.toLowerCase().includes('comedor'));
+      const comPartida = targetPartidas.find(p => p.name.toLowerCase().includes('comedor'));
       if (comPartida) setPartidaId(comPartida.id);
     } else {
-      const funcPartida = partidas.find(p => p.name.toLowerCase().includes('funcionamento'));
+      const funcPartida = targetPartidas.find(p => p.name.toLowerCase().includes('funcionamento'));
       if (funcPartida) setPartidaId(funcPartida.id);
     }
   };
@@ -77,6 +142,10 @@ export default function NewMovementModal({
       setReferenceDoc('');
       setNotes('');
       setIsReconciled(false);
+      setImputeToPreviousYear(false);
+      setPrevYearPartidas([]);
+      const match = partidas.find(p => p.code.toLowerCase().includes(bankAccountId === 'comedor' ? 'com' : 'func'));
+      setPartidaId(match ? match.id : (partidas[0]?.id || ''));
       setIsOpen(false);
     });
   };
@@ -207,24 +276,80 @@ export default function NewMovementModal({
 
               {/* Imputación a Partida e Categoría Oficial */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
-                <div className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                  <span>Imputación Contable e Consellería</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/60 pb-2">
+                  <div className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                    <span>Imputación Contable e Consellería</span>
+                  </div>
+
+                  {previousYears.length > 0 && (
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100/80 px-2 py-1 rounded-md border border-amber-200/80 transition-colors select-none">
+                      <input
+                        type="checkbox"
+                        checked={imputeToPreviousYear}
+                        onChange={(e) => handleTogglePreviousYear(e.target.checked)}
+                        className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5 cursor-pointer"
+                      />
+                      <span>Imputar a partida do ano anterior</span>
+                    </label>
+                  )}
                 </div>
+
+                {imputeToPreviousYear && (
+                  <div className="p-2.5 rounded-lg bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div>
+                        <span className="font-bold">Imputación a exercicio anterior: </span>
+                        <span>O gasto/ingreso computarase na partida do exercicio seleccionado.</span>
+                      </div>
+                    </div>
+                    {previousYears.length > 1 ? (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[11px] font-semibold text-amber-800">Ano:</span>
+                        <select
+                          value={selectedPrevYearId}
+                          onChange={(e) => handleChangePrevYear(e.target.value)}
+                          className="text-xs rounded-md border border-amber-300 bg-white px-2 py-1 font-semibold text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                        >
+                          {previousYears.map(py => (
+                            <option key={py.id} value={py.id}>
+                              {py.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <span className="font-bold text-amber-800 bg-white px-2 py-0.5 rounded border border-amber-200 text-[11px] shrink-0">
+                        {previousYears[0]?.name}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">
-                      Partida Orzamentaria Anual
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Partida Orzamentaria {imputeToPreviousYear ? `(${previousYears.find(y => y.id === selectedPrevYearId)?.name || 'Ano anterior'})` : 'Anual'}
+                      </label>
+                      {isLoadingPrevPartidas && (
+                        <span className="text-[10px] text-amber-600 animate-pulse font-medium">Cargando partidas...</span>
+                      )}
+                    </div>
                     <select
                       value={partidaId}
                       onChange={(e) => setPartidaId(e.target.value)}
-                      className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                      disabled={isLoadingPrevPartidas}
+                      className={`w-full text-sm rounded-lg border px-3 py-2 bg-white focus:outline-hidden focus:ring-2 text-slate-800 transition-colors ${
+                        imputeToPreviousYear 
+                          ? 'border-amber-300 focus:ring-amber-500 ring-1 ring-amber-200' 
+                          : 'border-slate-300 focus:ring-indigo-500'
+                      }`}
                     >
                       <option value="">-- Sen imputar a partida --</option>
-                      {partidas.map(p => (
+                      {(imputeToPreviousYear ? prevYearPartidas : partidas).map(p => (
                         <option key={p.id} value={p.id}>
-                          {p.name} {p.is_base ? '(Básica)' : ''}
+                          {p.name} {p.is_base ? '(Básica)' : ''} {imputeToPreviousYear ? `[${previousYears.find(y => y.id === selectedPrevYearId)?.name || 'Ano anterior'}]` : ''}
                         </option>
                       ))}
                     </select>

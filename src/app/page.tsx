@@ -237,6 +237,7 @@ export default function DashboardPage() {
           partidas={partidas}
           incomeCategories={incomeCats}
           expenseCategories={expenseCats}
+          years={years}
         />
       </main>
     </div>

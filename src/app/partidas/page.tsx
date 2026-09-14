@@ -19,7 +19,7 @@ export default async function PartidasPage() {
   const partidas = getBudgetPartidas(currentYear.id);
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
-  const movements = getMovements({ academicYearId: currentYear.id });
+  const movements = getMovements({ academicYearId: currentYear.id, includeImputedPartidas: true });
 
   return (
     <div className="flex-1 flex flex-col">

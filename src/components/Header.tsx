@@ -64,6 +64,7 @@ export default function Header({
             incomeCategories={incomeCategories}
             expenseCategories={expenseCategories}
             currentYearId={currentYear.id}
+            years={years}
           />
         </div>
       </div>

@@ -215,7 +215,7 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
 
       {/* Footer Info */}
       <div className="px-3 py-2 border-t border-slate-800/40 bg-slate-950 text-center">
-        <p className="text-[9px] text-slate-500">Consellería de Educación · Xunta de Galicia</p>
+        <p className="text-[9px] text-slate-500">XecoCole.cliic.eu</p>
       </div>
     </aside>
   );
