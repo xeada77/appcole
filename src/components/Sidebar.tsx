@@ -85,7 +85,7 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-bold tracking-tight text-white text-lg">XecoCole</span>
-              <span className="text-[10px] font-semibold uppercase bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">v16</span>
+              {/* <span className="text-[10px] font-semibold uppercase bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">v16</span> */}
             </div>
             <p className="text-[11px] text-slate-400">Xestión Económica Escolar</p>
           </div>

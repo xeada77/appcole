@@ -1,6 +1,6 @@
 'use client';
 
-import { School, Database, Calendar } from 'lucide-react';
+
 import NewMovementModal from './NewMovementModal';
 import YearSelector from './YearSelector';
 import BackupModal from './BackupModal';
@@ -37,7 +37,7 @@ export default function Header({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h1>
-            
+
           </div>
           <p className="text-xs text-slate-500">{subtitle}</p>
         </div>
@@ -47,7 +47,7 @@ export default function Header({
           <YearSelector currentYear={currentYear} years={years} variant="header" />
           {/* Quick Balance indicator */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-            
+
             <span className="text-xs text-slate-500 font-medium">Saldo Global:</span>
             <span className="text-sm font-bold text-indigo-700">
               {formatCurrency(totalBalance)}
@@ -55,7 +55,7 @@ export default function Header({
           </div>
 
           {/* Backup Modal Trigger */}
-          <BackupModal variant="header" />
+          {/*<BackupModal variant="header" />*/}
 
           {/* Novo Movemento Trigger */}
           <NewMovementModal
