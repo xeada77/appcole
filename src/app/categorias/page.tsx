@@ -6,10 +6,20 @@ import {
   getExpenseCategories,
   getCurrentAcademicYear,
   getAcademicYears,
-  getCategoriesWithTotals
+  getCategoriesWithTotals,
+  getCrossYearCategoryMovements
 } from '@/lib/queries';
-import { formatCurrency } from '@/lib/utils';
-import { ArrowUpRight, ArrowDownRight, BookOpen, Layers, ShieldCheck } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  BookOpen, 
+  Layers, 
+  ShieldCheck, 
+  ArrowRightLeft, 
+  AlertCircle, 
+  CheckCircle2 
+} from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +31,7 @@ export default async function CategoriasPage() {
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
   const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(currentYear.id);
+  const { attributedToOtherYears, attributedFromOtherYears } = getCrossYearCategoryMovements(currentYear.id);
 
   const totalIncome = incomeWithTotals.reduce((sum, c) => sum + c.totalAmount, 0);
   const totalExpense = expensesWithTotals.reduce((sum, c) => sum + c.totalAmount, 0);
@@ -226,6 +237,214 @@ export default async function CategoriasPage() {
             </div>
           </div>
         </div>
+
+        {/* Sección Informativa: Imputacións de Ingresos e Gastos entre Exercicios */}
+        {(attributedToOtherYears.length > 0 || attributedFromOtherYears.length > 0) && (
+          <section className="space-y-6 pt-6 border-t border-slate-200">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center border border-amber-500/20">
+                  <ArrowRightLeft className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Trazabilidade de Movementos Catalogados noutros Exercicios
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Control e xustificación de ingresos e gastos cuxo efecto orzamentario corresponde a unha partida doutro ano
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Caso 1: Movementos executados neste ano pero catalogados noutro ano polo destino da súa partida */}
+            {attributedToOtherYears.length > 0 && (
+              <div className="bg-amber-50/40 rounded-2xl p-6 border border-amber-200/90 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/70 pb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-700 shrink-0" />
+                    <h4 className="text-sm font-bold text-amber-950">
+                      Movementos deste ano contable ({currentYear.name}) catalogados no exercicio ao que correspondía a súa partida
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300/80 self-start sm:self-auto">
+                    Excluídos dos totais superiores
+                  </span>
+                </div>
+
+                <p className="text-xs text-amber-900/90">
+                  Os seguintes ingresos ou gastos foron rexistrados bancariamente durante o exercicio <strong>{currentYear.name}</strong>, pero ao ter sido atribuídos a unha partida orzamentaria doutro ano, <strong>foron catalogados nas categorías oficiais dese exercicio de destino</strong> e non incrementan os totais reflectidos nesta pantalla:
+                </p>
+
+                <div className="overflow-x-auto bg-white rounded-xl border border-amber-200 shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-amber-50/70 text-amber-900 font-semibold uppercase tracking-wider border-b border-amber-200">
+                      <tr>
+                        <th className="px-4 py-2.5">Data</th>
+                        <th className="px-4 py-2.5">Conta</th>
+                        <th className="px-4 py-2.5">Tipo</th>
+                        <th className="px-4 py-2.5">Concepto</th>
+                        <th className="px-4 py-2.5">Categoría Oficial</th>
+                        <th className="px-4 py-2.5">Partida e Ano de Destino</th>
+                        <th className="px-4 py-2.5 text-right">Importe</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100/60">
+                      {attributedToOtherYears.map((m) => (
+                        <tr key={m.id} className="hover:bg-amber-50/30 transition-colors">
+                          <td className="px-4 py-2.5 whitespace-nowrap text-slate-600 font-medium">
+                            {formatDate(m.date)}
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              m.bank_account_id === 'comedor' 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {m.bank_account_id === 'comedor' ? 'COMEDOR' : 'FUNCIONAMENTO'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 font-semibold ${
+                              m.type === 'INGRESO' ? 'text-emerald-700' : 'text-rose-700'
+                            }`}>
+                              {m.type === 'INGRESO' ? (
+                                <ArrowUpRight className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDownRight className="h-3.5 w-3.5" />
+                              )}
+                              {m.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 font-medium text-slate-900">
+                            {m.concept}
+                          </td>
+                          <td className="px-4 py-2.5 text-slate-600">
+                            {m.category_code ? (
+                              <span className="font-mono font-semibold text-slate-700">
+                                {m.category_code}.- {m.category_name}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">Sen categoría</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-indigo-900">
+                                {m.partida_name}
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                Catalogado en {m.partida_year_name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-bold whitespace-nowrap">
+                            <span className={m.type === 'INGRESO' ? 'text-emerald-700' : 'text-rose-700'}>
+                              {formatCurrency(m.amount)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Caso 2: Movementos doutros exercicios incorporados e catalogados neste ano */}
+            {attributedFromOtherYears.length > 0 && (
+              <div className="bg-emerald-50/40 rounded-2xl p-6 border border-emerald-200/90 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/70 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0" />
+                    <h4 className="text-sm font-bold text-emerald-950">
+                      Movementos doutros exercicios incorporados e catalogados en {currentYear.name}
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/80 self-start sm:self-auto">
+                    Computados nos totais superiores
+                  </span>
+                </div>
+
+                <p className="text-xs text-emerald-900/90">
+                  Os seguintes movementos foron executados na conta bancaria noutro ano contable, pero ao estar atribuídos a unha partida orzamentaria pertencente a <strong>{currentYear.name}</strong>, <strong>foron catalogados e computados neste exercicio</strong> e están sumados nas categorías oficiais mostradas arriba:
+                </p>
+
+                <div className="overflow-x-auto bg-white rounded-xl border border-emerald-200 shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-emerald-50/70 text-emerald-900 font-semibold uppercase tracking-wider border-b border-emerald-200">
+                      <tr>
+                        <th className="px-4 py-2.5">Data Execución</th>
+                        <th className="px-4 py-2.5">Exercicio Bancario</th>
+                        <th className="px-4 py-2.5">Conta</th>
+                        <th className="px-4 py-2.5">Tipo</th>
+                        <th className="px-4 py-2.5">Concepto</th>
+                        <th className="px-4 py-2.5">Partida deste Ano</th>
+                        <th className="px-4 py-2.5">Categoría Oficial</th>
+                        <th className="px-4 py-2.5 text-right">Importe</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-emerald-100/60">
+                      {attributedFromOtherYears.map((m) => (
+                        <tr key={m.id} className="hover:bg-emerald-50/30 transition-colors">
+                          <td className="px-4 py-2.5 whitespace-nowrap text-slate-600 font-medium">
+                            {formatDate(m.date)}
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                              {m.movement_year_name}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              m.bank_account_id === 'comedor' 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {m.bank_account_id === 'comedor' ? 'COMEDOR' : 'FUNCIONAMENTO'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 font-semibold ${
+                              m.type === 'INGRESO' ? 'text-emerald-700' : 'text-rose-700'
+                            }`}>
+                              {m.type === 'INGRESO' ? (
+                                <ArrowUpRight className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDownRight className="h-3.5 w-3.5" />
+                              )}
+                              {m.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 font-medium text-slate-900">
+                            {m.concept}
+                          </td>
+                          <td className="px-4 py-2.5 font-semibold text-indigo-900">
+                            {m.partida_name}
+                          </td>
+                          <td className="px-4 py-2.5 text-slate-600">
+                            {m.category_code ? (
+                              <span className="font-mono font-semibold text-slate-700">
+                                {m.category_code}.- {m.category_name}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">Sen categoría</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-bold whitespace-nowrap">
+                            <span className={m.type === 'INGRESO' ? 'text-emerald-700' : 'text-rose-700'}>
+                              {formatCurrency(m.amount)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );

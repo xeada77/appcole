@@ -80,3 +80,27 @@ export interface DashboardStats {
   partidasOverview: BudgetPartida[];
 }
 
+export interface CrossYearMovement {
+  id: string;
+  date: string;
+  type: 'INGRESO' | 'GASTO';
+  concept: string;
+  amount: number;
+  bank_account_id: string;
+  account_name: string;
+  partida_id: string;
+  partida_name: string;
+  partida_code: string;
+  movement_year_id: string;
+  movement_year_name: string;
+  partida_year_id: string;
+  partida_year_name: string;
+  category_code: string | null;
+  category_name: string | null;
+}
+
+export interface CrossYearMovementsSummary {
+  attributedToOtherYears: CrossYearMovement[];
+  attributedFromOtherYears: CrossYearMovement[];
+}
+

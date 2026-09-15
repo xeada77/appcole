@@ -189,7 +189,7 @@ export default function BankMovementsView({
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-15 w-15 text-indigo-400" />
                 <h2 className="text-lg font-bold">
-                  Cadro de Conciliación Bancaria: {selectedAccountId === 'all' ? 'Consolidado' : currentAccount?.name}
+                  Conciliación Bancaria: {selectedAccountId === 'all' ? 'Consolidado' : currentAccount?.name}
                 </h2>
               </div>
               {/* <YearSelector currentYear={currentYear} years={years} variant="header" /> */}
@@ -375,7 +375,7 @@ export default function BankMovementsView({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="block font-medium text-indigo-700">{mov.partida_name}</span>
                           {mov.partida_year_id && mov.partida_year_id !== mov.academic_year_id && (
-                            <span 
+                            <span
                               className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200"
                               title={`Movemento imputado á partida do ano ${mov.partida_year_id}`}
                             >

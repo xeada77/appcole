@@ -168,11 +168,10 @@ export default function EditMovementModal({
             <button
               type="button"
               onClick={() => { setType('GASTO'); setCategoryId(''); }}
-              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                type === 'GASTO'
-                  ? 'bg-red-500 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${type === 'GASTO'
+                ? 'bg-red-500 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               <ArrowDownRight className="h-4 w-4" />
               <span>GASTO (Pago)</span>
@@ -180,11 +179,10 @@ export default function EditMovementModal({
             <button
               type="button"
               onClick={() => { setType('INGRESO'); setCategoryId(''); }}
-              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                type === 'INGRESO'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${type === 'INGRESO'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               <ArrowUpRight className="h-4 w-4" />
               <span>INGRESO (Cobro)</span>
@@ -260,8 +258,8 @@ export default function EditMovementModal({
           {/* Imputación a Partida e Categoría */}
           <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/60 pb-2">
-              <div className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                <span>Imputación Contable e Consellería</span>
+              <div className="text-base font-bold text-indigo-900 flex items-center gap-1.5">
+                <span>Imputación Contable</span>
               </div>
 
               {previousYears.length > 0 && (
@@ -323,11 +321,10 @@ export default function EditMovementModal({
                   value={partidaId}
                   onChange={(e) => setPartidaId(e.target.value)}
                   disabled={isLoadingPrevPartidas}
-                  className={`w-full text-sm rounded-lg border px-3 py-2 bg-white focus:outline-hidden focus:ring-2 text-slate-800 transition-colors ${
-                    imputeToPreviousYear 
-                      ? 'border-amber-300 focus:ring-amber-500 ring-1 ring-amber-200' 
-                      : 'border-slate-300 focus:ring-indigo-500'
-                  }`}
+                  className={`w-full text-sm rounded-lg border px-3 py-2 bg-white focus:outline-hidden focus:ring-2 text-slate-800 transition-colors ${imputeToPreviousYear
+                    ? 'border-amber-300 focus:ring-amber-500 ring-1 ring-amber-200'
+                    : 'border-slate-300 focus:ring-indigo-500'
+                    }`}
                 >
                   <option value="">-- Sen imputar a partida --</option>
                   {(imputeToPreviousYear ? prevYearPartidas : partidas).map(p => (
@@ -355,8 +352,8 @@ export default function EditMovementModal({
                         const depth = (cat.code.match(/\./g) || []).length;
                         const indent = '\u00A0\u00A0'.repeat(depth);
                         return (
-                          <option 
-                            key={cat.id} 
+                          <option
+                            key={cat.id}
                             value={cat.id}
                             disabled={cat.is_group === 1}
                             className={cat.is_group === 1 ? 'font-bold bg-slate-100 text-slate-500' : ''}
@@ -370,8 +367,8 @@ export default function EditMovementModal({
                       const depth = (cat.code.match(/\./g) || []).length;
                       const indent = '\u00A0\u00A0'.repeat(depth);
                       return (
-                        <option 
-                          key={cat.id} 
+                        <option
+                          key={cat.id}
                           value={cat.id}
                           disabled={cat.is_group === 1}
                           className={cat.is_group === 1 ? 'font-bold bg-slate-100 text-slate-500' : ''}

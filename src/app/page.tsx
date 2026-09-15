@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { 
-  Landmark, 
-  TrendingUp, 
-  TrendingDown, 
-  AlertCircle, 
-  CheckCircle2, 
-  PieChart, 
+import {
+  Landmark,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  CheckCircle2,
+  PieChart,
   ArrowRight,
   ShieldCheck,
   Building,
@@ -15,14 +15,14 @@ import {
 } from 'lucide-react';
 import Header from '@/components/Header';
 import RecentMovementsTable from '@/components/RecentMovementsTable';
-import { 
-  getBankAccounts, 
-  getBudgetPartidas, 
-  getIncomeCategories, 
-  getExpenseCategories, 
-  getCurrentAcademicYear, 
+import {
+  getBankAccounts,
+  getBudgetPartidas,
+  getIncomeCategories,
+  getExpenseCategories,
+  getCurrentAcademicYear,
   getAcademicYears,
-  getDashboardStats 
+  getDashboardStats
 } from '@/lib/queries';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -179,7 +179,7 @@ export default function DashboardPage() {
               }
 
               return (
-                <div 
+                <div
                   key={partida.id}
                   className="rounded-xl border border-slate-200/70 p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors"
                 >
@@ -202,7 +202,7 @@ export default function DashboardPage() {
 
                   {/* Progress bar */}
                   <div className="w-full bg-slate-200 rounded-full h-2 mt-3 overflow-hidden">
-                    <div 
+                    <div
                       className={`h-2 rounded-full transition-all duration-500 ${progressColor}`}
                       style={{ width: `${percentSpent}%` }}
                     />

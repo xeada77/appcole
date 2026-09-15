@@ -1,5 +1,14 @@
 import { getDb } from './db';
-import { BankAccount, AcademicYear, BudgetPartida, Category, Movement, DashboardStats } from './types';
+import { 
+  BankAccount, 
+  AcademicYear, 
+  BudgetPartida, 
+  Category, 
+  Movement, 
+  DashboardStats,
+  CrossYearMovement,
+  CrossYearMovementsSummary
+} from './types';
 
 function toPlain<T>(data: T): T {
   return JSON.parse(JSON.stringify(data));
@@ -284,12 +293,15 @@ export function getCategoriesWithTotals(academicYearId?: string): {
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
 
-  // Get total income by category
+  // Get total income by category, attributed according to the partida's academic year if assigned
   const incomeTotals = db.prepare(`
-    SELECT income_category_id, COALESCE(SUM(amount), 0) as total
-    FROM movements
-    WHERE academic_year_id = ? AND type = 'INGRESO' AND income_category_id IS NOT NULL
-    GROUP BY income_category_id
+    SELECT m.income_category_id, COALESCE(SUM(m.amount), 0) as total
+    FROM movements m
+    LEFT JOIN budget_partidas p ON m.partida_id = p.id
+    WHERE COALESCE(p.academic_year_id, m.academic_year_id) = ? 
+      AND m.type = 'INGRESO' 
+      AND m.income_category_id IS NOT NULL
+    GROUP BY m.income_category_id
   `).all(yearId) as unknown as { income_category_id: string; total: number }[];
 
   const incomeMap = new Map<string, number>();
@@ -307,12 +319,15 @@ export function getCategoriesWithTotals(academicYearId?: string): {
   const remanenteH = basePartidasSum?.total || 0;
   incomeMap.set('inc-h', remanenteH);
 
-  // Get total expense by category
+  // Get total expense by category, attributed according to the partida's academic year if assigned
   const expenseTotals = db.prepare(`
-    SELECT expense_category_id, COALESCE(SUM(amount), 0) as total
-    FROM movements
-    WHERE academic_year_id = ? AND type = 'GASTO' AND expense_category_id IS NOT NULL
-    GROUP BY expense_category_id
+    SELECT m.expense_category_id, COALESCE(SUM(m.amount), 0) as total
+    FROM movements m
+    LEFT JOIN budget_partidas p ON m.partida_id = p.id
+    WHERE COALESCE(p.academic_year_id, m.academic_year_id) = ? 
+      AND m.type = 'GASTO' 
+      AND m.expense_category_id IS NOT NULL
+    GROUP BY m.expense_category_id
   `).all(yearId) as unknown as { expense_category_id: string; total: number }[];
 
   const expenseMap = new Map<string, number>();
@@ -323,6 +338,58 @@ export function getCategoriesWithTotals(academicYearId?: string): {
   const expensesWithTotals = buildCategoryTree(expenseCats, expenseMap, null);
 
   return toPlain({ incomeWithTotals, expensesWithTotals });
+}
+
+export function getCrossYearCategoryMovements(academicYearId?: string): CrossYearMovementsSummary {
+  const db = getDb();
+  const yearId = academicYearId || getCurrentAcademicYear().id;
+
+  // 1. Movements recorded in this academic year but attributed to a partida of another year
+  const attributedToOtherYears = db.prepare(`
+    SELECT 
+      m.id, m.date, m.type, m.concept, m.amount, m.bank_account_id,
+      b.name as account_name,
+      m.partida_id, p.name as partida_name, p.code as partida_code,
+      m.academic_year_id as movement_year_id, y_m.name as movement_year_name,
+      p.academic_year_id as partida_year_id, y_p.name as partida_year_name,
+      COALESCE(ic.code, ec.code) as category_code,
+      COALESCE(ic.name, ec.name) as category_name
+    FROM movements m
+    JOIN budget_partidas p ON m.partida_id = p.id
+    JOIN bank_accounts b ON m.bank_account_id = b.id
+    JOIN academic_years y_m ON m.academic_year_id = y_m.id
+    JOIN academic_years y_p ON p.academic_year_id = y_p.id
+    LEFT JOIN income_categories ic ON m.income_category_id = ic.id
+    LEFT JOIN expense_categories ec ON m.expense_category_id = ec.id
+    WHERE m.academic_year_id = ? AND p.academic_year_id != ?
+    ORDER BY m.date DESC, m.created_at DESC
+  `).all(yearId, yearId) as unknown as CrossYearMovement[];
+
+  // 2. Movements recorded in another academic year but attributed to a partida of this year
+  const attributedFromOtherYears = db.prepare(`
+    SELECT 
+      m.id, m.date, m.type, m.concept, m.amount, m.bank_account_id,
+      b.name as account_name,
+      m.partida_id, p.name as partida_name, p.code as partida_code,
+      m.academic_year_id as movement_year_id, y_m.name as movement_year_name,
+      p.academic_year_id as partida_year_id, y_p.name as partida_year_name,
+      COALESCE(ic.code, ec.code) as category_code,
+      COALESCE(ic.name, ec.name) as category_name
+    FROM movements m
+    JOIN budget_partidas p ON m.partida_id = p.id
+    JOIN bank_accounts b ON m.bank_account_id = b.id
+    JOIN academic_years y_m ON m.academic_year_id = y_m.id
+    JOIN academic_years y_p ON p.academic_year_id = y_p.id
+    LEFT JOIN income_categories ic ON m.income_category_id = ic.id
+    LEFT JOIN expense_categories ec ON m.expense_category_id = ec.id
+    WHERE m.academic_year_id != ? AND p.academic_year_id = ?
+    ORDER BY m.date DESC, m.created_at DESC
+  `).all(yearId, yearId) as unknown as CrossYearMovement[];
+
+  return toPlain({
+    attributedToOtherYears,
+    attributedFromOtherYears
+  });
 }
 
 export interface ComedorReportData {
