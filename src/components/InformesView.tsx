@@ -32,10 +32,29 @@ export default function InformesView({
   const totalIncomeCats = incomeWithTotals.reduce((s, c) => s + c.totalAmount, 0);
   const totalExpenseCats = expensesWithTotals.reduce((s, c) => s + c.totalAmount, 0);
 
+  // Partida básica de Comedor (para obter a dotación inicial deste ano)
+  const comPartida = partidas.find(p => p.is_base === 1 && (p.code === 'PART-COM' || p.name.toLowerCase() === 'comedor'));
+  const dotacionInicialComedor = comPartida?.initial_budget || 0;
+
   // Categorías específicas de Comedor Escolar para o Punto 4
   const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
-  const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
+  const catA6Raw = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
   const cat14 = expensesWithTotals.find(c => c.code === '14');
+
+  // No Punto 4, a subcategoría a.6.1 reflicte exclusivamente aquí a dotación inicial da partida básica de comedor
+  const a6Subcategories = (catA6Raw?.subcategories || []).map(sub => {
+    if (sub.code === 'a.6.1') {
+      return {
+        ...sub,
+        totalAmount: sub.totalAmount + dotacionInicialComedor
+      };
+    }
+    return sub;
+  });
+
+  const totalComedorIncome = a6Subcategories.reduce((sum, s) => sum + s.totalAmount, 0);
+  const totalComedorExpense = cat14?.totalAmount || 0;
+  const saldoNetoComedor = totalComedorIncome - totalComedorExpense;
 
   const handleGeneratePdf = async () => {
     if (isGeneratingPdf) return;
@@ -414,7 +433,7 @@ export default function InformesView({
                   Ingresos Comedor Escolar (Categoría a.6)
                 </span>
                 <span className="text-xs font-black text-amber-800 font-mono">
-                  {formatCurrency(catA6?.totalAmount || 0)}
+                  {formatCurrency(totalComedorIncome)}
                 </span>
               </div>
               <div className="overflow-x-auto">
@@ -427,8 +446,8 @@ export default function InformesView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {catA6?.subcategories && catA6.subcategories.length > 0 ? (
-                      catA6.subcategories.map(sub => {
+                    {a6Subcategories && a6Subcategories.length > 0 ? (
+                      a6Subcategories.map(sub => {
                         const hasAmount = sub.totalAmount > 0;
                         return (
                           <tr key={sub.id} className={hasAmount ? 'bg-amber-50/30 font-medium' : 'hover:bg-slate-50/60'}>
@@ -436,7 +455,14 @@ export default function InformesView({
                               {sub.code}
                             </td>
                             <td className="p-2.5 text-slate-800">
-                              {sub.name}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span>{sub.name}</span>
+                                {sub.code === 'a.6.1' && dotacionInicialComedor > 0 && (
+                                  <span className="text-[10px] font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">
+                                    Dotación inicial partida básica
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className={`p-2.5 text-right font-mono whitespace-nowrap ${
                               hasAmount ? 'font-bold text-emerald-700' : 'text-slate-400'
@@ -458,7 +484,7 @@ export default function InformesView({
                     <tr>
                       <td colSpan={2} className="p-2.5 text-amber-950 uppercase text-right pr-4">Total Ingresos Comedor (a.6):</td>
                       <td className="p-2.5 text-right text-emerald-700 font-black font-mono">
-                        {formatCurrency(catA6?.totalAmount || 0)}
+                        {formatCurrency(totalComedorIncome)}
                       </td>
                     </tr>
                   </tfoot>
@@ -581,18 +607,18 @@ export default function InformesView({
             <div className="flex items-center gap-6">
               <div className="text-right">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Ingresos a.6</span>
-                <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(catA6?.totalAmount || 0)}</span>
+                <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(totalComedorIncome)}</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Gastos 14</span>
-                <span className="font-mono font-bold text-rose-700 text-xs">{formatCurrency(cat14?.totalAmount || 0)}</span>
+                <span className="font-mono font-bold text-rose-700 text-xs">{formatCurrency(totalComedorExpense)}</span>
               </div>
               <div className="text-right pl-4 border-l border-slate-300">
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">Saldo Neto Comedor</span>
                 <span className={`font-mono font-black text-sm ${
-                  ((catA6?.totalAmount || 0) - (cat14?.totalAmount || 0)) >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                  saldoNetoComedor >= 0 ? 'text-emerald-700' : 'text-rose-700'
                 }`}>
-                  {formatCurrency((catA6?.totalAmount || 0) - (cat14?.totalAmount || 0))}
+                  {formatCurrency(saldoNetoComedor)}
                 </span>
               </div>
             </div>

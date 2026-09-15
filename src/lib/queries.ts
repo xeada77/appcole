@@ -401,14 +401,41 @@ export interface ComedorReportData {
 }
 
 export function getComedorReportData(academicYearId?: string): ComedorReportData {
-  const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(academicYearId);
+  const db = getDb();
+  const yearId = academicYearId || getCurrentAcademicYear().id;
+  const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(yearId);
 
   // Find a.6: subcategory of 'a'
   const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
-  const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6') || null;
+  const catA6Raw = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6') || null;
 
   // Find 14: root category of expenses
   const cat14 = expensesWithTotals.find(c => c.code === '14') || null;
+
+  const comPartida = db.prepare(`
+    SELECT initial_budget FROM budget_partidas 
+    WHERE academic_year_id = ? AND is_base = 1 AND (code = 'PART-COM' OR name = 'Comedor') 
+    LIMIT 1
+  `).get(yearId) as { initial_budget: number } | undefined;
+  const dotacionComedor = comPartida?.initial_budget || 0;
+
+  let catA6: CategoryWithTotal | null = null;
+  if (catA6Raw) {
+    const subs = (catA6Raw.subcategories || []).map(s => {
+      if (s.code === 'a.6.1') {
+        return {
+          ...s,
+          totalAmount: s.totalAmount + dotacionComedor
+        };
+      }
+      return s;
+    });
+    catA6 = {
+      ...catA6Raw,
+      subcategories: subs,
+      totalAmount: subs.reduce((sum, s) => sum + s.totalAmount, 0)
+    };
+  }
 
   const totalIncomeComedor = catA6?.totalAmount || 0;
   const totalExpenseComedor = cat14?.totalAmount || 0;

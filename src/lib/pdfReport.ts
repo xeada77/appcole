@@ -352,13 +352,20 @@ export function generateClearVectorPdf({
   const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
   const cat14 = expensesWithTotals.find(c => c.code === '14');
 
-  // Táboa 4.A: Ingresos Comedor a.6
+  const comPartida = partidas.find(p => p.is_base === 1 && (p.code === 'PART-COM' || p.name.toLowerCase() === 'comedor'));
+  const dotacionInicialComedor = comPartida?.initial_budget || 0;
+
+  // Táboa 4.A: Ingresos Comedor a.6 (a.6.1 reflicte a dotación inicial da partida básica de comedor)
   const a6Rows: any[] = [];
+  let totalComedorIncome = 0;
   catA6?.subcategories?.forEach(sub => {
+    const isA61 = sub.code === 'a.6.1';
+    const amount = isA61 ? (sub.totalAmount + dotacionInicialComedor) : sub.totalAmount;
+    totalComedorIncome += amount;
     a6Rows.push([
       sub.code,
-      sub.name,
-      formatCurrency(sub.totalAmount)
+      isA61 && dotacionInicialComedor > 0 ? `${sub.name} (* Dotación inicial partida básica)` : sub.name,
+      formatCurrency(amount)
     ]);
   });
 
@@ -367,7 +374,7 @@ export function generateClearVectorPdf({
     margin: { left: margin, right: margin },
     head: [['Cód.', 'Ingresos Comedor Escolar (Categoría a.6)', 'Total Imputado']],
     body: a6Rows.length > 0 ? a6Rows : [['-', 'Sen movementos rexistrados en a.6', formatCurrency(0)]],
-    foot: [['TOTAL INGRESOS (a.6):', '', formatCurrency(catA6?.totalAmount || 0)]],
+    foot: [['TOTAL INGRESOS (a.6):', '', formatCurrency(totalComedorIncome)]],
     theme: 'grid',
     styles: {
       fontSize: 7,
@@ -466,7 +473,7 @@ export function generateClearVectorPdf({
 
   // Liña resumo de Saldo Neto Comedor
   currentY = (doc as any).lastAutoTable.finalY + 4;
-  const netComedor = (catA6?.totalAmount || 0) - (cat14?.totalAmount || 0);
+  const netComedor = totalComedorIncome - (cat14?.totalAmount || 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(51, 65, 85);
