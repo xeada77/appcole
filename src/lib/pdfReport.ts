@@ -274,10 +274,11 @@ export function generateClearVectorPdf({
   // Table 3.B: Gastos
   currentY = (doc as any).lastAutoTable.finalY + 5;
   if (currentY > pageHeight - 80) {
-    doc.addPage();
-    drawDocumentHeader();
-    currentY = 32;
+
   }
+  doc.addPage();
+  drawDocumentHeader();
+  currentY = 32;
 
   const totExpenseCats = expensesWithTotals.reduce((s, c) => s + c.totalAmount, 0);
   const expenseRows: any[] = [];
@@ -337,10 +338,11 @@ export function generateClearVectorPdf({
   // 4. Desglose de Comedor Escolar (Categorías a.6 e 14)
   currentY = (doc as any).lastAutoTable.finalY + 7;
   if (currentY > pageHeight - 90) {
-    doc.addPage();
-    drawDocumentHeader();
-    currentY = 32;
+
   }
+  doc.addPage();
+  drawDocumentHeader();
+  currentY = 32;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
@@ -374,7 +376,7 @@ export function generateClearVectorPdf({
     margin: { left: margin, right: margin },
     head: [['Cód.', 'Ingresos Comedor Escolar (Categoría a.6)', 'Total Imputado']],
     body: a6Rows.length > 0 ? a6Rows : [['-', 'Sen movementos rexistrados en a.6', formatCurrency(0)]],
-    foot: [['TOTAL INGRESOS (a.6):', '', formatCurrency(totalComedorIncome)]],
+    foot: [['TOTAL  :', '', formatCurrency(totalComedorIncome)]],
     theme: 'grid',
     styles: {
       fontSize: 7,
@@ -441,7 +443,7 @@ export function generateClearVectorPdf({
     margin: { left: margin, right: margin },
     head: [['Cód.', 'Gastos Comedor Escolar (Categoría 14)', 'Total Executado']],
     body: exp14Rows.length > 0 ? exp14Rows : [['-', 'Sen movementos rexistrados en 14', formatCurrency(0)]],
-    foot: [['TOTAL GASTOS (14):', '', formatCurrency(cat14?.totalAmount || 0)]],
+    foot: [['TOTAL    :', '', formatCurrency(cat14?.totalAmount || 0)]],
     theme: 'grid',
     styles: {
       fontSize: 7,
