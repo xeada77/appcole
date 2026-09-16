@@ -53,6 +53,35 @@ export default function BankMovementsView({
   const funcAcc = accounts.find(a => a.id === 'funcionamento');
   const comAcc = accounts.find(a => a.id === 'comedor');
 
+  // Dynamic register numbers calculation (e.g. 01/26F, 01/26C)
+  const registerMap = useMemo(() => {
+    // Sort chronologically ascending (oldest first)
+    const sorted = [...movements].sort((a, b) => {
+      const dateCmp = a.date.localeCompare(b.date);
+      if (dateCmp !== 0) return dateCmp;
+      const createdCmp = (a.created_at || '').localeCompare(b.created_at || '');
+      if (createdCmp !== 0) return createdCmp;
+      return a.id.localeCompare(b.id);
+    });
+
+    const counters: Record<string, number> = {};
+    const map = new Map<string, string>();
+
+    for (const mov of sorted) {
+      const accSuffix = mov.bank_account_id === 'comedor' ? 'C' : 'F';
+      const rawYear = mov.academic_year_id || (mov.date ? mov.date.slice(0, 4) : currentYear.id);
+      const yearStr = rawYear.slice(-2);
+      const key = `${accSuffix}-${yearStr}`;
+
+      counters[key] = (counters[key] || 0) + 1;
+      const seqStr = String(counters[key]).padStart(2, '0');
+      const reg = `${seqStr}/${yearStr}${accSuffix}`;
+      map.set(mov.id, reg);
+    }
+
+    return map;
+  }, [movements, currentYear.id]);
+
   // Filtered movements
   const filteredMovements = useMemo(() => {
     return movements.filter(m => {
@@ -68,17 +97,19 @@ export default function BankMovementsView({
       // Search term
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
+        const regNumber = registerMap.get(m.id)?.toLowerCase() || '';
+        const matchesReg = regNumber.includes(query);
         const matchesConcept = m.concept.toLowerCase().includes(query);
         const matchesDoc = m.reference_doc?.toLowerCase().includes(query) || false;
         const matchesNotes = m.notes?.toLowerCase().includes(query) || false;
         const matchesCat = m.category_name?.toLowerCase().includes(query) || false;
-        if (!matchesConcept && !matchesDoc && !matchesNotes && !matchesCat) {
+        if (!matchesReg && !matchesConcept && !matchesDoc && !matchesNotes && !matchesCat) {
           return false;
         }
       }
       return true;
     });
-  }, [movements, selectedAccountId, filterStatus, filterType, searchQuery]);
+  }, [movements, selectedAccountId, filterStatus, filterType, searchQuery, registerMap]);
 
   // Current active account details (if single account selected)
   const currentAccount = accounts.find(a => a.id === selectedAccountId);
@@ -232,7 +263,7 @@ export default function BankMovementsView({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por concepto, Nº factura, notas ou categoría..."
+            placeholder="Buscar por rexistro (ex: 01/26F), concepto, Nº factura, notas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full text-sm pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-800"
@@ -305,6 +336,7 @@ export default function BankMovementsView({
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3 text-center" title="Número de Rexistro">Reg.</th>
                 <th className="px-5 py-3">Data</th>
                 <th className="px-5 py-3">Conta</th>
                 <th className="px-5 py-3">Tipo</th>
@@ -318,7 +350,7 @@ export default function BankMovementsView({
             <tbody className="divide-y divide-slate-100">
               {filteredMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-slate-400">
+                  <td colSpan={9} className="px-5 py-10 text-center text-slate-400">
                     <p className="font-medium text-slate-600">Non se atoparon movementos cos filtros actuais.</p>
                     <p className="text-xs text-slate-400 mt-1">Probe a cambiar os criterios de busca ou engada un novo movemento.</p>
                   </td>
@@ -331,6 +363,15 @@ export default function BankMovementsView({
                     title="Faga dobre clic para editar este movemento"
                     className="hover:bg-indigo-50/50 transition-colors group cursor-pointer"
                   >
+                    <td className="px-4 py-3.5 whitespace-nowrap text-center">
+                      <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-md border ${
+                        mov.bank_account_id === 'comedor'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-blue-50 text-blue-800 border-blue-200'
+                      }`}>
+                        {registerMap.get(mov.id) || '-'}
+                      </span>
+                    </td>
                     <td className="px-5 py-3.5 font-medium text-slate-600 whitespace-nowrap text-xs">
                       {formatDate(mov.date)}
                     </td>
