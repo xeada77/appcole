@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'node:crypto';
 import { getBudgetPartidas } from './queries';
 import { BudgetPartida } from './types';
+import { formatCurrency } from './utils';
 
 export async function createMovementAction(formData: FormData) {
   const db = getDb();
@@ -156,18 +157,64 @@ export async function createBudgetPartidaAction(formData: FormData) {
 
   const id = 'part-' + crypto.randomUUID().slice(0, 8);
   const academicYearId = formData.get('academic_year_id') as string;
-  const name = formData.get('name') as string;
-  const code = (formData.get('code') as string) || ('PART-' + Math.floor(100 + Math.random() * 900));
+  const name = (formData.get('name') as string)?.trim();
+  const code = ((formData.get('code') as string)?.trim()) || ('PART-' + Math.floor(100 + Math.random() * 900));
   const initialBudget = parseFloat(formData.get('initial_budget') as string) || 0;
-  const description = (formData.get('description') as string) || null;
+  const description = ((formData.get('description') as string)?.trim()) || null;
 
-  const stmt = db.prepare(`
-    INSERT INTO budget_partidas (
-      id, academic_year_id, code, name, is_base, initial_budget, description
-    ) VALUES (?, ?, ?, ?, 0, ?, ?)
-  `);
+  if (!name) {
+    return { success: false, error: 'O nome da partida é obrigatorio.' };
+  }
 
-  stmt.run(id, academicYearId, code.toUpperCase(), name, initialBudget, description);
+  if (initialBudget < 0) {
+    return { success: false, error: 'A dotación inicial non pode ser negativa.' };
+  }
+
+  let funcPartida: { id: string; initial_budget: number } | undefined;
+  if (initialBudget > 0) {
+    funcPartida = db.prepare(`
+      SELECT id, initial_budget
+      FROM budget_partidas
+      WHERE academic_year_id = ? AND is_base = 1 AND (code = 'PART-FUNC' OR LOWER(name) IN ('funcionamento', 'funcionamiento'))
+      LIMIT 1
+    `).get(academicYearId) as { id: string; initial_budget: number } | undefined;
+
+    if (!funcPartida) {
+      return { success: false, error: 'Non se atopou a partida básica de Funcionamento para este exercicio escolar.' };
+    }
+
+    if (initialBudget > funcPartida.initial_budget) {
+      return {
+        success: false,
+        error: `A cantidade indicada (${formatCurrency(initialBudget)}) supera a dotación inicial dispoñible na partida básica Funcionamento (${formatCurrency(funcPartida.initial_budget)}).`
+      };
+    }
+  }
+
+  db.exec('BEGIN');
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO budget_partidas (
+        id, academic_year_id, code, name, is_base, initial_budget, description
+      ) VALUES (?, ?, ?, ?, 0, ?, ?)
+    `);
+
+    stmt.run(id, academicYearId, code.toUpperCase(), name, initialBudget, description);
+
+    if (funcPartida && initialBudget > 0) {
+      const newFuncBudget = Math.round((funcPartida.initial_budget - initialBudget) * 100) / 100;
+      db.prepare(`
+        UPDATE budget_partidas
+        SET initial_budget = ?
+        WHERE id = ?
+      `).run(newFuncBudget, funcPartida.id);
+    }
+
+    db.exec('COMMIT');
+  } catch (err: any) {
+    db.exec('ROLLBACK');
+    return { success: false, error: err?.message || 'Erro ao gardar a partida orzamentaria.' };
+  }
 
   revalidatePath('/', 'layout');
   return { success: true, id };
@@ -203,14 +250,40 @@ export async function updateBudgetPartidaAction(id: string, initialBudget: numbe
 export async function deleteBudgetPartidaAction(id: string) {
   const db = getDb();
   // Don't allow deleting base partidas
-  const partida = db.prepare(`SELECT is_base FROM budget_partidas WHERE id = ?`).get(id) as { is_base: number } | undefined;
+  const partida = db.prepare(`SELECT academic_year_id, is_base, initial_budget FROM budget_partidas WHERE id = ?`).get(id) as { academic_year_id: string; is_base: number; initial_budget: number } | undefined;
   if (!partida || partida.is_base === 1) {
     return { success: false, error: 'Non se poden eliminar as partidas básicas de Funcionamento ou Comedor.' };
   }
 
-  // Detach movements before deleting
-  db.prepare(`UPDATE movements SET partida_id = NULL WHERE partida_id = ?`).run(id);
-  db.prepare(`DELETE FROM budget_partidas WHERE id = ?`).run(id);
+  db.exec('BEGIN');
+  try {
+    // Detach movements before deleting
+    db.prepare(`UPDATE movements SET partida_id = NULL WHERE partida_id = ?`).run(id);
+    db.prepare(`DELETE FROM budget_partidas WHERE id = ?`).run(id);
+
+    // Reintegrar a dotación inicial á partida básica Funcionamento se tiña dotación asignada
+    if (partida.initial_budget > 0) {
+      const funcPartida = db.prepare(`
+        SELECT id, initial_budget FROM budget_partidas
+        WHERE academic_year_id = ? AND is_base = 1 AND (code = 'PART-FUNC' OR LOWER(name) IN ('funcionamento', 'funcionamiento'))
+        LIMIT 1
+      `).get(partida.academic_year_id) as { id: string; initial_budget: number } | undefined;
+
+      if (funcPartida) {
+        const restoredBudget = Math.round((funcPartida.initial_budget + partida.initial_budget) * 100) / 100;
+        db.prepare(`
+          UPDATE budget_partidas
+          SET initial_budget = ?
+          WHERE id = ?
+        `).run(restoredBudget, funcPartida.id);
+      }
+    }
+
+    db.exec('COMMIT');
+  } catch (err: any) {
+    db.exec('ROLLBACK');
+    return { success: false, error: err?.message || 'Erro ao eliminar a partida.' };
+  }
 
   revalidatePath('/', 'layout');
   return { success: true };

@@ -37,6 +37,10 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
   const totalSpent = partidas.reduce((s, p) => s + (p.spent_amount || 0), 0);
   const totalAvailable = partidas.reduce((s, p) => s + (p.available_balance || 0), 0);
 
+  const funcPartida = partidas.find(
+    p => p.is_base === 1 && (p.code === 'PART-FUNC' || p.name.toLowerCase() === 'funcionamento' || p.name.toLowerCase() === 'funcionamiento')
+  );
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Action */}
@@ -50,7 +54,7 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
             As partidas básicas son <strong>Funcionamento</strong> e <strong>Comedor</strong>. Pode crear partidas orzamentarias específicas para cada exercicio escolar e imputarlles os ingresos e gastos correspondentes.
           </p>
         </div>
-        <NewPartidaModal currentYearId={currentYearId} />
+        <NewPartidaModal currentYearId={currentYearId} funcInitialBudget={funcPartida?.initial_budget} />
       </div>
 
       {/* Global Budget Overview Cards */}

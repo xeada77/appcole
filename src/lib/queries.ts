@@ -308,15 +308,15 @@ export function getCategoriesWithTotals(academicYearId?: string): {
   incomeTotals.forEach(row => incomeMap.set(row.income_category_id, row.total));
 
   // Category H: "Remanentes do ano anterior"
-  // Esta categoría especial reflicte as dotacións iniciais consolidadas das partidas básicas (Funcionamento + Comedor)
+  // Esta categoría especial reflicte as dotacións iniciais consolidadas das partidas do ano (básicas e específicas)
   // e nunca procede dun movemento nas contas correntes bancarias.
-  const basePartidasSum = db.prepare(`
+  const allPartidasSum = db.prepare(`
     SELECT COALESCE(SUM(initial_budget), 0) as total
     FROM budget_partidas
-    WHERE academic_year_id = ? AND is_base = 1
+    WHERE academic_year_id = ?
   `).get(yearId) as { total: number };
 
-  const remanenteH = basePartidasSum?.total || 0;
+  const remanenteH = allPartidasSum?.total || 0;
   incomeMap.set('inc-h', remanenteH);
 
   // Get total expense by category, attributed according to the partida's academic year if assigned
