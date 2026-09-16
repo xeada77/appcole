@@ -25,7 +25,7 @@ interface PartidasViewProps {
 }
 
 export default function PartidasView({ partidas, movements, currentYearId }: PartidasViewProps) {
-  const [expandedPartidaId, setExpandedPartidaId] = useState<string | null>(partidas[0]?.id || null);
+  const [expandedPartidaId, setExpandedPartidaId] = useState<string | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedPartidaId(prev => prev === id ? null : id);
