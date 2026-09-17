@@ -90,7 +90,8 @@ export async function uploadInvoice(
   accountId: string
 ): Promise<UploadInvoiceResult> {
   const originalFilename = file.name || 'factura.pdf';
-  const cleanName = sanitizeFilename(originalFilename);
+  //const cleanName = sanitizeFilename(originalFilename);
+  const cleanName = sanitizeFilename('factura.pdf');// Forzar nome fixo
   const ext = path.extname(cleanName) || '.pdf';
   const baseName = path.basename(cleanName, ext);
 
