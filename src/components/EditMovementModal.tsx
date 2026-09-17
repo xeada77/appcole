@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { X, ArrowDownRight, ArrowUpRight, Check, AlertCircle, Pencil } from 'lucide-react';
+import { X, ArrowDownRight, ArrowUpRight, Check, AlertCircle, Pencil, Paperclip, FileText, Trash2, ExternalLink } from 'lucide-react';
 import { BankAccount, BudgetPartida, Category, Movement, AcademicYear } from '@/lib/types';
 import { updateMovementAction, getPartidasByYearAction } from '@/lib/actions';
 
@@ -113,6 +113,8 @@ export default function EditMovementModal({
   const [referenceDoc, setReferenceDoc] = useState(movement.reference_doc || '');
   const [notes, setNotes] = useState(movement.notes || '');
   const [isReconciled, setIsReconciled] = useState(movement.is_reconciled === 1);
+  const [removeInvoice, setRemoveInvoice] = useState(false);
+  const [newInvoiceFile, setNewInvoiceFile] = useState<File | null>(null);
 
   if (!isOpen) return null;
 
@@ -133,6 +135,8 @@ export default function EditMovementModal({
       if (referenceDoc) formData.append('reference_doc', referenceDoc);
       if (notes) formData.append('notes', notes);
       formData.append('is_reconciled', isReconciled ? 'true' : 'false');
+      if (removeInvoice) formData.append('remove_invoice', 'true');
+      if (newInvoiceFile) formData.append('invoice', newInvoiceFile);
 
       await updateMovementAction(formData);
       onClose();
@@ -410,6 +414,138 @@ export default function EditMovementModal({
                 className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-800"
               />
             </div>
+          </div>
+
+          {/* Xestión de Factura / Xustificante dixital */}
+          <div className="pt-2 border-t border-slate-100">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5 text-indigo-600" />
+                Factura / Xustificante dixital
+              </span>
+              <span className="text-[11px] font-normal text-slate-400">PDF, PNG, JPG ata 15MB</span>
+            </label>
+
+            {/* Caso 1: Xa tiña factura asociada */}
+            {movement.invoice_key && !removeInvoice ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 rounded-xl border border-indigo-200 bg-indigo-50/50 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg shrink-0">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-800 truncate">
+                        {movement.invoice_filename || 'Factura adxunta'}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {movement.invoice_size ? `${(movement.invoice_size / 1024).toFixed(0)} KB • ` : ''}Almacenado en RustFS
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href={`/api/movements/${movement.id}/invoice?v=${encodeURIComponent(movement.invoice_key || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-medium text-xs shadow-2xs transition-colors"
+                      title="Abrir factura nunha nova pestana"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>Ver</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setRemoveInvoice(true)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium text-xs shadow-2xs transition-colors cursor-pointer"
+                      title="Eliminar esta factura"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Opción para substituír a factura existente */}
+                {newInvoiceFile ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-amber-200 bg-amber-50/50 text-xs">
+                    <span className="text-amber-800 font-medium truncate">
+                      Substituír por: {newInvoiceFile.name} ({(newInvoiceFile.size / 1024).toFixed(0)} KB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setNewInvoiceFile(null)}
+                      className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer font-medium pl-1">
+                    <span>Substituír por outro arquivo...</span>
+                    <input
+                      type="file"
+                      accept=".pdf,image/png,image/jpeg,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setNewInvoiceFile(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            ) : removeInvoice ? (
+              /* Caso 2: O usuario marcou a factura para eliminar */
+              <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-rose-300 bg-rose-50/50 text-xs">
+                <span className="text-rose-700 font-medium">
+                  A factura actual será eliminada permanentemente ao gardar.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRemoveInvoice(false)}
+                  className="px-2.5 py-1 rounded-md bg-white border border-rose-300 text-rose-700 hover:bg-rose-50 font-semibold cursor-pointer"
+                >
+                  Desfacer
+                </button>
+              </div>
+            ) : (
+              /* Caso 3: Non tiña factura ou quere subir unha */
+              <div>
+                {newInvoiceFile ? (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg border border-indigo-200 bg-indigo-50/50 text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <span className="font-semibold text-slate-800 truncate">{newInvoiceFile.name}</span>
+                      <span className="text-slate-500 shrink-0">({(newInvoiceFile.size / 1024).toFixed(0)} KB)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewInvoiceFile(null)}
+                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                      title="Eliminar arquivo seleccionado"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50/70 cursor-pointer transition-colors text-xs text-slate-600">
+                    <Paperclip className="h-4 w-4 text-slate-400" />
+                    <span>Faga clic para adxuntar unha factura ou xustificante</span>
+                    <input
+                      type="file"
+                      accept=".pdf,image/png,image/jpeg,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setNewInvoiceFile(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Reconciled Checkbox */}

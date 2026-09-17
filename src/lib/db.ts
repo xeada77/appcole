@@ -104,6 +104,10 @@ function initSchema(db: DatabaseSync) {
       reconciled_date TEXT,
       reference_doc TEXT,
       notes TEXT,
+      invoice_key TEXT,
+      invoice_filename TEXT,
+      invoice_mimetype TEXT,
+      invoice_size INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE RESTRICT,
       FOREIGN KEY (academic_year_id) REFERENCES academic_years(id) ON DELETE RESTRICT,
@@ -136,6 +140,12 @@ function initSchema(db: DatabaseSync) {
   } catch {
     // Column already exists
   }
+
+  // Safe migration for movement invoice columns
+  try { db.exec('ALTER TABLE movements ADD COLUMN invoice_key TEXT;'); } catch {}
+  try { db.exec('ALTER TABLE movements ADD COLUMN invoice_filename TEXT;'); } catch {}
+  try { db.exec('ALTER TABLE movements ADD COLUMN invoice_mimetype TEXT;'); } catch {}
+  try { db.exec('ALTER TABLE movements ADD COLUMN invoice_size INTEGER;'); } catch {}
 
   // Safe migration: Subcategorías de Comedor Escolar (Ingresos a.6 e Gastos 14)
   try {

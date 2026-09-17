@@ -58,6 +58,10 @@ export interface Movement {
   reconciled_date: string | null;
   reference_doc: string | null;
   notes: string | null;
+  invoice_key?: string | null;
+  invoice_filename?: string | null;
+  invoice_mimetype?: string | null;
+  invoice_size?: number | null;
   created_at: string;
   
   // Joined fields for display

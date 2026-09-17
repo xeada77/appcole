@@ -169,7 +169,9 @@ export function getMovements(filters: MovementFilterParams = {}): Movement[] {
     SELECT 
       m.id, m.bank_account_id, m.academic_year_id, m.date, m.type, m.concept,
       m.amount, m.partida_id, m.income_category_id, m.expense_category_id,
-      m.is_reconciled, m.reconciled_date, m.reference_doc, m.notes, m.created_at,
+      m.is_reconciled, m.reconciled_date, m.reference_doc, m.notes,
+      m.invoice_key, m.invoice_filename, m.invoice_mimetype, m.invoice_size,
+      m.created_at,
       b.name as account_name, b.code as account_code,
       p.name as partida_name, p.academic_year_id as partida_year_id,
       COALESCE(ic.name, ec.name) as category_name,

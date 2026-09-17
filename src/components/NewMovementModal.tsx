@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { Plus, X, ArrowDownRight, ArrowUpRight, Check, AlertCircle } from 'lucide-react';
+import { Plus, X, ArrowDownRight, ArrowUpRight, Check, AlertCircle, Paperclip, FileText } from 'lucide-react';
 import { BankAccount, BudgetPartida, Category, AcademicYear } from '@/lib/types';
 import { createMovementAction, getPartidasByYearAction } from '@/lib/actions';
 
@@ -68,6 +68,7 @@ export default function NewMovementModal({
   const [referenceDoc, setReferenceDoc] = useState('');
   const [notes, setNotes] = useState('');
   const [isReconciled, setIsReconciled] = useState(false);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
   // Function to load previous year's partidas
   const loadPreviousPartidas = async (yearId: string) => {
@@ -133,6 +134,7 @@ export default function NewMovementModal({
       if (referenceDoc) formData.append('reference_doc', referenceDoc);
       if (notes) formData.append('notes', notes);
       formData.append('is_reconciled', isReconciled ? 'true' : 'false');
+      if (invoiceFile) formData.append('invoice', invoiceFile);
 
       await createMovementAction(formData);
 
@@ -142,6 +144,7 @@ export default function NewMovementModal({
       setReferenceDoc('');
       setNotes('');
       setIsReconciled(false);
+      setInvoiceFile(null);
       setImputeToPreviousYear(false);
       setPrevYearPartidas([]);
       const match = partidas.find(p => p.code.toLowerCase().includes(bankAccountId === 'comedor' ? 'com' : 'func'));
@@ -427,6 +430,48 @@ export default function NewMovementModal({
                     className="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-800"
                   />
                 </div>
+              </div>
+
+              {/* Subida opcional de Factura / Xustificante */}
+              <div className="pt-2 border-t border-slate-100">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Paperclip className="h-3.5 w-3.5 text-indigo-600" />
+                    Factura / Xustificante dixital (Opcional)
+                  </span>
+                  <span className="text-[11px] font-normal text-slate-400">PDF, PNG, JPG ata 15MB</span>
+                </label>
+                {invoiceFile ? (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg border border-indigo-200 bg-indigo-50/50 text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <span className="font-semibold text-slate-800 truncate">{invoiceFile.name}</span>
+                      <span className="text-slate-500 shrink-0">({(invoiceFile.size / 1024).toFixed(0)} KB)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceFile(null)}
+                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                      title="Eliminar factura seleccionada"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50/70 cursor-pointer transition-colors text-xs text-slate-600">
+                    <Paperclip className="h-4 w-4 text-slate-400" />
+                    <span>Faga clic para adxuntar unha factura ou xustificante dixital</span>
+                    <input
+                      type="file"
+                      accept=".pdf,image/png,image/jpeg,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setInvoiceFile(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
 
               {/* Checkbox Conciliación Bancaria */}

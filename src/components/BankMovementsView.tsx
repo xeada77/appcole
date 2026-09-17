@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   AlertCircle,
   Pencil,
-  Plus
+  Plus,
+  Paperclip
 } from 'lucide-react';
 import { BankAccount, Movement, BudgetPartida, Category, AcademicYear } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -398,11 +399,24 @@ export default function BankMovementsView({
                       <div className="font-semibold text-slate-900 group-hover:text-indigo-900 transition-colors">
                         {mov.concept}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {mov.reference_doc && (
                           <span className="text-[11px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.2 rounded">
                             Doc: {mov.reference_doc}
                           </span>
+                        )}
+                        {mov.invoice_key && (
+                          <a
+                            href={`/api/movements/${mov.id}/invoice?v=${encodeURIComponent(mov.invoice_key)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-[11px] text-indigo-700 font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2 py-0.5 rounded-md transition-colors"
+                            title={`Ver factura adxunta: ${mov.invoice_filename || 'Descargar'}`}
+                          >
+                            <Paperclip className="h-3 w-3 text-indigo-600" />
+                            <span>Factura</span>
+                          </a>
                         )}
                         {mov.notes && (
                           <span className="text-[11px] text-slate-400 italic">

@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { getBudgetPartidas } from './queries';
 import { BudgetPartida } from './types';
 import { formatCurrency } from './utils';
+import { uploadInvoice, deleteInvoice } from './storage';
 
 export async function createMovementAction(formData: FormData) {
   const db = getDb();
@@ -34,12 +35,32 @@ export async function createMovementAction(formData: FormData) {
     expenseCategoryId = categoryId;
   }
 
+  // Xestión opcional da factura
+  const invoiceFile = formData.get('invoice') as File | null;
+  let invoiceKey: string | null = null;
+  let invoiceFilename: string | null = null;
+  let invoiceMimetype: string | null = null;
+  let invoiceSize: number | null = null;
+
+  if (invoiceFile && invoiceFile.size > 0) {
+    try {
+      const uploadResult = await uploadInvoice(invoiceFile, id, academicYearId, bankAccountId);
+      invoiceKey = uploadResult.key;
+      invoiceFilename = uploadResult.filename;
+      invoiceMimetype = uploadResult.mimetype;
+      invoiceSize = uploadResult.size;
+    } catch (uploadErr) {
+      console.error('Erro ao subir factura:', uploadErr);
+    }
+  }
+
   const stmt = db.prepare(`
     INSERT INTO movements (
       id, bank_account_id, academic_year_id, date, type, concept, amount,
       partida_id, income_category_id, expense_category_id, is_reconciled,
-      reconciled_date, reference_doc, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      reconciled_date, reference_doc, notes,
+      invoice_key, invoice_filename, invoice_mimetype, invoice_size
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -56,7 +77,11 @@ export async function createMovementAction(formData: FormData) {
     isReconciled,
     reconciledDate,
     referenceDoc,
-    notes
+    notes,
+    invoiceKey,
+    invoiceFilename,
+    invoiceMimetype,
+    invoiceSize
   );
 
   revalidatePath('/', 'layout');
@@ -89,6 +114,51 @@ export async function updateMovementAction(formData: FormData) {
     expenseCategoryId = categoryId;
   }
 
+  // Obter datos actuais do movemento para xestionar a factura
+  const existing = db.prepare(`
+    SELECT invoice_key, invoice_filename, invoice_mimetype, invoice_size, academic_year_id
+    FROM movements
+    WHERE id = ?
+  `).get(id) as {
+    invoice_key: string | null;
+    invoice_filename: string | null;
+    invoice_mimetype: string | null;
+    invoice_size: number | null;
+    academic_year_id: string;
+  } | undefined;
+
+  let invoiceKey = existing?.invoice_key || null;
+  let invoiceFilename = existing?.invoice_filename || null;
+  let invoiceMimetype = existing?.invoice_mimetype || null;
+  let invoiceSize = existing?.invoice_size || null;
+
+  const removeInvoice = formData.get('remove_invoice') === 'true';
+  const invoiceFile = formData.get('invoice') as File | null;
+
+  if (removeInvoice) {
+    if (existing?.invoice_key) {
+      await deleteInvoice(existing.invoice_key);
+    }
+    invoiceKey = null;
+    invoiceFilename = null;
+    invoiceMimetype = null;
+    invoiceSize = null;
+  } else if (invoiceFile && invoiceFile.size > 0) {
+    if (existing?.invoice_key) {
+      await deleteInvoice(existing.invoice_key);
+    }
+    try {
+      const yearId = existing?.academic_year_id || '2026';
+      const uploadResult = await uploadInvoice(invoiceFile, id, yearId, bankAccountId);
+      invoiceKey = uploadResult.key;
+      invoiceFilename = uploadResult.filename;
+      invoiceMimetype = uploadResult.mimetype;
+      invoiceSize = uploadResult.size;
+    } catch (uploadErr) {
+      console.error('Erro ao actualizar factura:', uploadErr);
+    }
+  }
+
   const stmt = db.prepare(`
     UPDATE movements
     SET bank_account_id = ?,
@@ -102,7 +172,11 @@ export async function updateMovementAction(formData: FormData) {
         is_reconciled = ?,
         reconciled_date = ?,
         reference_doc = ?,
-        notes = ?
+        notes = ?,
+        invoice_key = ?,
+        invoice_filename = ?,
+        invoice_mimetype = ?,
+        invoice_size = ?
     WHERE id = ?
   `);
 
@@ -119,6 +193,10 @@ export async function updateMovementAction(formData: FormData) {
     reconciledDate,
     referenceDoc,
     notes,
+    invoiceKey,
+    invoiceFilename,
+    invoiceMimetype,
+    invoiceSize,
     id
   );
 
@@ -145,6 +223,12 @@ export async function toggleReconciliationAction(movementId: string, newState: b
 
 export async function deleteMovementAction(movementId: string) {
   const db = getDb();
+
+  const existing = db.prepare(`SELECT invoice_key FROM movements WHERE id = ?`).get(movementId) as { invoice_key: string | null } | undefined;
+  if (existing?.invoice_key) {
+    await deleteInvoice(existing.invoice_key);
+  }
+
   const stmt = db.prepare(`DELETE FROM movements WHERE id = ?`);
   stmt.run(movementId);
 
