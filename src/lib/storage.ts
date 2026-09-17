@@ -12,8 +12,8 @@ import { Readable } from 'node:stream';
 
 const RUSTFS_ENDPOINT = process.env.RUSTFS_ENDPOINT || 'http://127.0.0.1:9000';
 const RUSTFS_BUCKET = process.env.RUSTFS_BUCKET || 'facturas';
-const RUSTFS_ACCESS_KEY = process.env.RUSTFS_ACCESS_KEY || 'appcoleadmin';
-const RUSTFS_SECRET_KEY = process.env.RUSTFS_SECRET_KEY || 'appcoleadminsecret123';
+const RUSTFS_ACCESS_KEY = process.env.RUSTFS_ACCESS_KEY || '';
+const RUSTFS_SECRET_KEY = process.env.RUSTFS_SECRET_KEY || '';
 
 const LOCAL_FALLBACK_DIR = path.join(process.cwd(), 'data', 'rustfs', RUSTFS_BUCKET);
 
