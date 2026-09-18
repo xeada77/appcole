@@ -466,7 +466,14 @@ export default function NewMovementModal({
                       accept=".pdf,image/png,image/jpeg,image/webp"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setInvoiceFile(file);
+                        if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            alert('O arquivo supera o tamaño máximo permitido de 15 MB.');
+                            e.target.value = '';
+                            return;
+                          }
+                          setInvoiceFile(file);
+                        }
                       }}
                       className="hidden"
                     />

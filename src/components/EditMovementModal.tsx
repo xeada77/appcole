@@ -489,7 +489,14 @@ export default function EditMovementModal({
                       accept=".pdf,image/png,image/jpeg,image/webp"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setNewInvoiceFile(file);
+                        if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            alert('O arquivo supera o tamaño máximo permitido de 15 MB.');
+                            e.target.value = '';
+                            return;
+                          }
+                          setNewInvoiceFile(file);
+                        }
                       }}
                       className="hidden"
                     />
@@ -538,7 +545,14 @@ export default function EditMovementModal({
                       accept=".pdf,image/png,image/jpeg,image/webp"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setNewInvoiceFile(file);
+                        if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            alert('O arquivo supera o tamaño máximo permitido de 15 MB.');
+                            e.target.value = '';
+                            return;
+                          }
+                          setNewInvoiceFile(file);
+                        }
                       }}
                       className="hidden"
                     />
