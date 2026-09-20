@@ -518,7 +518,7 @@ export default function InformesView({
                   </tbody>
                   <tfoot className="bg-amber-50/50 font-bold border-t border-amber-200">
                     <tr>
-                      <td colSpan={2} className="p-2.5 text-amber-950 uppercase text-right pr-4">Total Ingresos Comedor (a.6):</td>
+                      <td colSpan={2} className="p-2.5 text-amber-950 uppercase text-right pr-4">Total Global Ingresos Comedor:</td>
                       <td className="p-2.5 text-right text-emerald-700 font-black font-mono">
                         {formatCurrency(totalComedorIncome)}
                       </td>
@@ -618,7 +618,7 @@ export default function InformesView({
                   </tbody>
                   <tfoot className="bg-rose-50/50 font-bold border-t border-rose-200">
                     <tr>
-                      <td colSpan={2} className="p-2.5 text-rose-950 uppercase text-right pr-4">Total Gastos Comedor (14):</td>
+                      <td colSpan={2} className="p-2.5 text-rose-950 uppercase text-right pr-4">Total Global Gastos Comedor:</td>
                       <td className="p-2.5 text-right text-rose-700 font-black font-mono">
                         {formatCurrency(cat14?.totalAmount || 0)}
                       </td>
@@ -642,15 +642,16 @@ export default function InformesView({
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Ingresos a.6</span>
-                <span className="font-mono font-bold text-emerald-700 text-xs">{formatCurrency(totalComedorIncome)}</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Ingresos</span>
+                <span className="font-mono font-bold text-emerald-700 text-sm">{formatCurrency(totalComedorIncome)}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Gastos 14</span>
-                <span className="font-mono font-bold text-rose-700 text-xs">{formatCurrency(totalComedorExpense)}</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Gastos</span>
+                <span className="font-mono font-bold text-rose-700 text-sm">{formatCurrency(totalComedorExpense)}</span>
               </div>
               <div className="text-right pl-4 border-l border-slate-300">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Saldo Neto Comedor</span>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Remanente que se incorpora ao seguinte período</span>
+                
                 <span className={`font-mono font-black text-sm ${
                   saldoNetoComedor >= 0 ? 'text-emerald-700' : 'text-rose-700'
                 }`}>
