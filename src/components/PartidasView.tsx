@@ -2,17 +2,13 @@
 
 import { useState } from 'react';
 import {
-  PieChart,
+ 
   ChevronDown,
   ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  Info,
-  Calendar,
+  
   Layers,
-  Sparkles,
-  CheckCircle2,
-  Paperclip
+  Paperclip,
+  FileText,
 } from 'lucide-react';
 import { BudgetPartida, Movement } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -253,7 +249,7 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
                                     className="inline-flex items-center gap-1 text-[11px] text-indigo-700 font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2 py-0.5 rounded-md transition-colors"
                                     title={`Ver factura adxunta: ${m.invoice_filename || 'Descargar'}`}
                                   >
-                                    <Paperclip className="h-3 w-3 text-indigo-600" />
+                                    <FileText className="h-3 w-3 text-indigo-600" />
                                     <span>Factura</span>
                                   </a>
                                 ) : (
