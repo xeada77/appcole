@@ -205,12 +205,17 @@ export function generateClearVectorPdf({
   // 3. Resumo por Categorías Oficiais (Ingresos e Gastos)
   currentY = (doc as any).lastAutoTable.finalY + 6;
 
-  // Check if we have enough space on current page for Section 3 header
+/*   // Check if we have enough space on current page for Section 3 header
   if (currentY > pageHeight - 60) {
     doc.addPage();
     drawDocumentHeader();
     currentY = 32;
-  }
+  } */
+
+  
+  doc.addPage();
+  drawDocumentHeader();
+  currentY = 32;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
@@ -499,7 +504,7 @@ export function generateClearVectorPdf({
   doc.setFontSize(7.5);
   doc.setTextColor(51, 65, 85);
   doc.text(
-    `* Saldo Neto Comedor Escolar (Ingresos a.6 - Gastos 14): ${formatCurrency(netComedor)}`,
+    `* REMANENTE QUE SE INCORPORA AO SEGUINTE PERIODO:: ${formatCurrency(netComedor)}`,
     margin,
     currentY
   );
