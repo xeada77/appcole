@@ -430,7 +430,7 @@ export default function InformesView({
                 <span>4. Desglose de Execución de Comedor Escolar</span>
               </h3>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Detalle orzamentario exclusivo das categorías oficiais de Comedor Escolar (Ingresos a.6 e Gastos 14)
+                Detalle orzamentario exclusivo das categorías oficiais de Comedor Escolar (Ingresos e Gastos)
               </p>
               {/* Etiqueta visible só en impresión */}
               <div className="hidden print:block mt-1">
@@ -441,7 +441,7 @@ export default function InformesView({
             </div>
 
             {/* Selector de Período (interactivo en pantalla, oculto en impresión) */}
-            <div className="flex items-center gap-2 print:hidden self-start md:self-auto bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 print:hidden self-start md:self-auto bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-3 shadow-2xs">
               <label htmlFor="comedor-period-select" className="text-xs font-bold text-slate-700 whitespace-nowrap">
                 Período:
               </label>
@@ -449,7 +449,7 @@ export default function InformesView({
                 id="comedor-period-select"
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as ComedorPeriod)}
-                className="text-xs font-semibold bg-white text-slate-800 border border-slate-300 rounded-lg px-2.5 py-1 focus:outline-hidden focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-2xs"
+                className="text-xs font-semibold bg-white text-slate-800 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-2xs"
               >
                 <option value="anual">Anual (01/01 a 31/12)</option>
                 <option value="t1">1º Trimestre (01/01 a 31/03)</option>

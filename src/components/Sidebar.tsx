@@ -41,7 +41,7 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
       badge: null
     },
     {
-      name: 'Contas & Conciliación',
+      name: 'Conciliación Bancaria',
       href: '/bancos',
       icon: Landmark,
       badge: totalPending > 0 ? `${totalPending} pend.` : null,
@@ -60,7 +60,7 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
       badge: null
     },
     {
-      name: 'Informes & Consello',
+      name: 'Informes',
       href: '/informes',
       icon: FileSpreadsheet,
       badge: null
