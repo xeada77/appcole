@@ -452,3 +452,179 @@ export function getComedorReportData(academicYearId?: string): ComedorReportData
   });
 }
 
+export type ComedorPeriod = 'anual' | 't1' | 't2' | 't3' | 't4';
+
+export interface ComedorPeriodReport {
+  period: ComedorPeriod;
+  label: string;
+  dateRangeLabel: string;
+  startDate: string;
+  endDate: string;
+  dotacionInicial: number;
+  a61Amount: number;
+  a61BadgeLabel: string;
+  a6Subcategories: CategoryWithTotal[];
+  cat14: CategoryWithTotal | null;
+  totalIncome: number;
+  totalExpense: number;
+  saldoNeto: number;
+}
+
+export type ComedorExecutionReport = Record<ComedorPeriod, ComedorPeriodReport>;
+
+export function getComedorExecutionReport(academicYearId?: string): ComedorExecutionReport {
+  const db = getDb();
+  const yearObj = academicYearId 
+    ? db.prepare(`SELECT * FROM academic_years WHERE id = ?`).get(academicYearId) as unknown as AcademicYear | undefined
+    : getCurrentAcademicYear();
+  const yearId = yearObj?.id || getCurrentAcademicYear().id;
+
+  // Obter o ano de 4 díxitos (ex: "2026")
+  const yearStr = yearObj?.start_date 
+    ? yearObj.start_date.substring(0, 4) 
+    : (yearId.match(/\d{4}/)?.[0] || '2026');
+
+  // Dotación inicial da partida básica de Comedor
+  const comPartida = db.prepare(`
+    SELECT initial_budget 
+    FROM budget_partidas 
+    WHERE academic_year_id = ? AND is_base = 1 AND (code = 'PART-COM' OR LOWER(name) = 'comedor')
+    LIMIT 1
+  `).get(yearId) as { initial_budget: number } | undefined;
+  const dotacionInicial = comPartida?.initial_budget || 0;
+
+  const incomeCats = getIncomeCategories();
+  const expenseCats = getExpenseCategories();
+
+  // Todos os movementos atribuídos a este ano académico
+  const movements = db.prepare(`
+    SELECT m.id, m.date, m.type, m.amount, m.income_category_id, m.expense_category_id
+    FROM movements m
+    LEFT JOIN budget_partidas p ON m.partida_id = p.id
+    WHERE COALESCE(p.academic_year_id, m.academic_year_id) = ?
+  `).all(yearId) as unknown as { id: string; date: string; type: string; amount: number; income_category_id: string | null; expense_category_id: string | null }[];
+
+  const periodsConfig: {
+    key: ComedorPeriod;
+    label: string;
+    dateRangeLabel: string;
+    start: string;
+    end: string;
+  }[] = [
+    { key: 't1', label: '1º Trimestre', dateRangeLabel: `01/01/${yearStr} a 31/03/${yearStr}`, start: `${yearStr}-01-01`, end: `${yearStr}-03-31` },
+    { key: 't2', label: '2º Trimestre', dateRangeLabel: `01/04/${yearStr} a 30/06/${yearStr}`, start: `${yearStr}-04-01`, end: `${yearStr}-06-30` },
+    { key: 't3', label: '3º Trimestre', dateRangeLabel: `01/07/${yearStr} a 31/08/${yearStr}`, start: `${yearStr}-07-01`, end: `${yearStr}-08-31` },
+    { key: 't4', label: '4º Trimestre', dateRangeLabel: `01/09/${yearStr} a 31/12/${yearStr}`, start: `${yearStr}-09-01`, end: `${yearStr}-12-31` },
+  ];
+
+  function computePeriod(
+    periodKey: ComedorPeriod,
+    label: string,
+    dateRangeLabel: string,
+    startDate: string,
+    endDate: string,
+    a61Amount: number,
+    a61BadgeLabel: string
+  ): ComedorPeriodReport {
+    // Filtrar movementos do rango de datas
+    const periodMovements = movements.filter(m => m.date >= startDate && m.date <= endDate);
+
+    // Mapa de ingresos
+    const incomeMap = new Map<string, number>();
+    periodMovements.forEach(m => {
+      if (m.type === 'INGRESO' && m.income_category_id) {
+        incomeMap.set(m.income_category_id, (incomeMap.get(m.income_category_id) || 0) + m.amount);
+      }
+    });
+
+    // Mapa de gastos
+    const expenseMap = new Map<string, number>();
+    periodMovements.forEach(m => {
+      if (m.type === 'GASTO' && m.expense_category_id) {
+        expenseMap.set(m.expense_category_id, (expenseMap.get(m.expense_category_id) || 0) + m.amount);
+      }
+    });
+
+    // Árbore de gastos
+    const expTree = buildCategoryTree(expenseCats, expenseMap, null);
+    const cat14 = expTree.find(c => c.code === '14') || null;
+
+    // Árbore de ingresos
+    const incTree = buildCategoryTree(incomeCats, incomeMap, null);
+    const parentA = incTree.find(c => c.code.toLowerCase() === 'a');
+    const catA6Raw = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
+
+    // Subcategorías de a.6 aplicando o importe correspondente a a.6.1
+    const a6Subcategories = (catA6Raw?.subcategories || []).map(sub => {
+      if (sub.code === 'a.6.1') {
+        const directMovAmount = incomeMap.get(sub.id) || 0;
+        return {
+          ...sub,
+          totalAmount: a61Amount + directMovAmount
+        };
+      }
+      return sub;
+    });
+
+    const totalIncome = a6Subcategories.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalExpense = cat14?.totalAmount || 0;
+    const saldoNeto = totalIncome - totalExpense;
+
+    return {
+      period: periodKey,
+      label,
+      dateRangeLabel,
+      startDate,
+      endDate,
+      dotacionInicial,
+      a61Amount,
+      a61BadgeLabel,
+      a6Subcategories,
+      cat14,
+      totalIncome,
+      totalExpense,
+      saldoNeto
+    };
+  }
+
+  // Cálculo encadeado dos trimestres: T1 -> T2 -> T3 -> T4
+  const quarterlyReports: Record<string, ComedorPeriodReport> = {};
+  let previousSaldo = dotacionInicial;
+
+  for (const cfg of periodsConfig) {
+    const isT1 = cfg.key === 't1';
+    const a61 = isT1 ? dotacionInicial : previousSaldo;
+    const badgeLabel = isT1
+      ? 'Dotación inicial partida básica (a 1 de xaneiro)'
+      : cfg.key === 't2'
+      ? 'Remanente procedente de 1º Trimestre'
+      : cfg.key === 't3'
+      ? 'Remanente procedente de 2º Trimestre'
+      : 'Remanente procedente de 3º Trimestre';
+
+    const rep = computePeriod(cfg.key, cfg.label, cfg.dateRangeLabel, cfg.start, cfg.end, a61, badgeLabel);
+    quarterlyReports[cfg.key] = rep;
+    previousSaldo = rep.saldoNeto;
+  }
+
+  // Consolidado Anual
+  const anualReport = computePeriod(
+    'anual',
+    'Anual',
+    `01/01/${yearStr} a 31/12/${yearStr}`,
+    `${yearStr}-01-01`,
+    `${yearStr}-12-31`,
+    dotacionInicial,
+    'Dotación inicial partida básica (a 1 de xaneiro)'
+  );
+
+  return toPlain({
+    anual: anualReport,
+    t1: quarterlyReports['t1'],
+    t2: quarterlyReports['t2'],
+    t3: quarterlyReports['t3'],
+    t4: quarterlyReports['t4']
+  });
+}
+
+

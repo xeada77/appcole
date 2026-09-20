@@ -3,7 +3,7 @@
 import { Fragment, useState, useRef } from 'react';
 import { Printer, School, ArrowUpRight, ArrowDownRight, FileDown, Loader2, Utensils } from 'lucide-react';
 import { BankAccount, BudgetPartida, AcademicYear } from '@/lib/types';
-import { CategoryWithTotal } from '@/lib/queries';
+import { CategoryWithTotal, ComedorPeriod, ComedorExecutionReport } from '@/lib/queries';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 interface InformesViewProps {
@@ -12,6 +12,7 @@ interface InformesViewProps {
   currentYear: AcademicYear;
   incomeWithTotals: CategoryWithTotal[];
   expensesWithTotals: CategoryWithTotal[];
+  comedorReport?: ComedorExecutionReport;
 }
 
 export default function InformesView({
@@ -19,10 +20,12 @@ export default function InformesView({
   partidas,
   currentYear,
   incomeWithTotals,
-  expensesWithTotals
+  expensesWithTotals,
+  comedorReport
 }: InformesViewProps) {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<ComedorPeriod>('anual');
 
   const totalBudget = partidas.reduce((s, p) => s + p.initial_budget, 0);
   const totalIncome = partidas.reduce((s, p) => s + (p.allocated_income || 0), 0);
@@ -36,13 +39,15 @@ export default function InformesView({
   const comPartida = partidas.find(p => p.is_base === 1 && (p.code === 'PART-COM' || p.name.toLowerCase() === 'comedor'));
   const dotacionInicialComedor = comPartida?.initial_budget || 0;
 
-  // Categorías específicas de Comedor Escolar para o Punto 4
+  // Datos do informe de comedor para o período seleccionado
+  const activeComedorReport = comedorReport ? comedorReport[selectedPeriod] : null;
+
+  // Categorías específicas de Comedor Escolar para o Punto 4 (fallback se non houbese comedorReport)
   const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
   const catA6Raw = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
-  const cat14 = expensesWithTotals.find(c => c.code === '14');
+  const cat14Raw = expensesWithTotals.find(c => c.code === '14');
 
-  // No Punto 4, a subcategoría a.6.1 reflicte exclusivamente aquí a dotación inicial da partida básica de comedor
-  const a6Subcategories = (catA6Raw?.subcategories || []).map(sub => {
+  const fallbackA6Subcategories = (catA6Raw?.subcategories || []).map(sub => {
     if (sub.code === 'a.6.1') {
       return {
         ...sub,
@@ -52,9 +57,12 @@ export default function InformesView({
     return sub;
   });
 
-  const totalComedorIncome = a6Subcategories.reduce((sum, s) => sum + s.totalAmount, 0);
-  const totalComedorExpense = cat14?.totalAmount || 0;
-  const saldoNetoComedor = totalComedorIncome - totalComedorExpense;
+  const a6Subcategories = activeComedorReport ? activeComedorReport.a6Subcategories : fallbackA6Subcategories;
+  const cat14 = activeComedorReport ? activeComedorReport.cat14 : cat14Raw;
+  const totalComedorIncome = activeComedorReport ? activeComedorReport.totalIncome : a6Subcategories.reduce((sum, s) => sum + s.totalAmount, 0);
+  const totalComedorExpense = activeComedorReport ? activeComedorReport.totalExpense : (cat14?.totalAmount || 0);
+  const saldoNetoComedor = activeComedorReport ? activeComedorReport.saldoNeto : (totalComedorIncome - totalComedorExpense);
+  const a61Badge = activeComedorReport ? activeComedorReport.a61BadgeLabel : 'Dotación inicial partida básica';
 
   const handleGeneratePdf = async () => {
     if (isGeneratingPdf) return;
@@ -67,7 +75,8 @@ export default function InformesView({
         partidas,
         currentYear,
         incomeWithTotals,
-        expensesWithTotals
+        expensesWithTotals,
+        selectedComedorPeriod: activeComedorReport || undefined
       });
     } catch (error) {
       console.error('Erro ao xerar o PDF:', error);
@@ -414,14 +423,41 @@ export default function InformesView({
 
         {/* 4. Desglose de Execución de Comedor Escolar (Ingresos a.6 e Gastos 14) */}
         <section className="space-y-4 print-avoid-break">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 pb-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-              <span className="h-2 w-2 bg-amber-500 rounded-full"></span>
-              <span>4. Desglose de Execución de Comedor Escolar</span>
-            </h3>
-            <span className="text-[11px] text-slate-500 font-medium">
-              Detalle orzamentario exclusivo das categorías oficiais de Comedor Escolar (Ingresos a.6 e Gastos 14)
-            </span>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                <span className="h-2 w-2 bg-amber-500 rounded-full"></span>
+                <span>4. Desglose de Execución de Comedor Escolar</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                Detalle orzamentario exclusivo das categorías oficiais de Comedor Escolar (Ingresos a.6 e Gastos 14)
+              </p>
+              {/* Etiqueta visible só en impresión */}
+              <div className="hidden print:block mt-1">
+                <span className="text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
+                  Período: {activeComedorReport?.label || 'Anual'} ({activeComedorReport?.dateRangeLabel || ''})
+                </span>
+              </div>
+            </div>
+
+            {/* Selector de Período (interactivo en pantalla, oculto en impresión) */}
+            <div className="flex items-center gap-2 print:hidden self-start md:self-auto bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-1.5 shadow-2xs">
+              <label htmlFor="comedor-period-select" className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                Período:
+              </label>
+              <select
+                id="comedor-period-select"
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value as ComedorPeriod)}
+                className="text-xs font-semibold bg-white text-slate-800 border border-slate-300 rounded-lg px-2.5 py-1 focus:outline-hidden focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-2xs"
+              >
+                <option value="anual">Anual (01/01 a 31/12)</option>
+                <option value="t1">1º Trimestre (01/01 a 31/03)</option>
+                <option value="t2">2º Trimestre (01/04 a 30/06)</option>
+                <option value="t3">3º Trimestre (01/07 a 31/08)</option>
+                <option value="t4">4º Trimestre (01/09 a 31/12)</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 print:grid-cols-2 gap-6 items-start">
@@ -457,9 +493,9 @@ export default function InformesView({
                             <td className="p-2.5 text-slate-800">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span>{sub.name}</span>
-                                {sub.code === 'a.6.1' && dotacionInicialComedor > 0 && (
-                                  <span className="text-[10px] font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">
-                                    Dotación inicial partida básica
+                                {sub.code === 'a.6.1' && (
+                                  <span className="text-[10px] font-semibold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200" title={a61Badge}>
+                                    {a61Badge}
                                   </span>
                                 )}
                               </div>
@@ -601,7 +637,7 @@ export default function InformesView({
               </div>
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">Balance Económico Comedor Escolar (a.6 - 14)</h4>
-                <p className="text-[11px] text-slate-500">Superávit ou déficit derivado da execución orzamentaria propia do servizo de comedor</p>
+                <p className="text-[11px] text-slate-500">Superávit ou déficit derivado da execución orzamentaria propia do servizo de comedor ({activeComedorReport?.label || 'Anual'})</p>
               </div>
             </div>
             <div className="flex items-center gap-6">

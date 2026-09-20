@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BankAccount, BudgetPartida, AcademicYear } from './types';
-import { CategoryWithTotal } from './queries';
+import { CategoryWithTotal, ComedorPeriodReport } from './queries';
 import { formatCurrency, formatDate } from './utils';
 
 export interface GeneratePdfParams {
@@ -10,6 +10,7 @@ export interface GeneratePdfParams {
   currentYear: AcademicYear;
   incomeWithTotals: CategoryWithTotal[];
   expensesWithTotals: CategoryWithTotal[];
+  selectedComedorPeriod?: ComedorPeriodReport;
 }
 
 export function generateClearVectorPdf({
@@ -17,7 +18,8 @@ export function generateClearVectorPdf({
   partidas,
   currentYear,
   incomeWithTotals,
-  expensesWithTotals
+  expensesWithTotals,
+  selectedComedorPeriod
 }: GeneratePdfParams): void {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -347,29 +349,43 @@ export function generateClearVectorPdf({
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('4. DESGLOSE DE EXECUCIÓN DE COMEDOR ESCOLAR (CATEGORÍAS a.6 E 14)', margin, currentY);
+  const periodTitle = selectedComedorPeriod
+    ? `4. DESGLOSE DE EXECUCIÓN DE COMEDOR ESCOLAR - ${selectedComedorPeriod.label.toUpperCase()} (${selectedComedorPeriod.dateRangeLabel})`
+    : '4. DESGLOSE DE EXECUCIÓN DE COMEDOR ESCOLAR (CATEGORÍAS a.6 E 14)';
+  doc.text(periodTitle, margin, currentY);
 
-  // Buscar a.6 e 14
-  const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
-  const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
-  const cat14 = expensesWithTotals.find(c => c.code === '14');
-
-  const comPartida = partidas.find(p => p.is_base === 1 && (p.code === 'PART-COM' || p.name.toLowerCase() === 'comedor'));
-  const dotacionInicialComedor = comPartida?.initial_budget || 0;
-
-  // Táboa 4.A: Ingresos Comedor a.6 (a.6.1 reflicte a dotación inicial da partida básica de comedor)
   const a6Rows: any[] = [];
   let totalComedorIncome = 0;
-  catA6?.subcategories?.forEach(sub => {
-    const isA61 = sub.code === 'a.6.1';
-    const amount = isA61 ? (sub.totalAmount + dotacionInicialComedor) : sub.totalAmount;
-    totalComedorIncome += amount;
-    a6Rows.push([
-      sub.code,
-      isA61 && dotacionInicialComedor > 0 ? `${sub.name} (* Dotación inicial partida básica)` : sub.name,
-      formatCurrency(amount)
-    ]);
-  });
+
+  if (selectedComedorPeriod) {
+    totalComedorIncome = selectedComedorPeriod.totalIncome;
+    selectedComedorPeriod.a6Subcategories.forEach(sub => {
+      const isA61 = sub.code === 'a.6.1';
+      a6Rows.push([
+        sub.code,
+        isA61 ? `${sub.name} (* ${selectedComedorPeriod.a61BadgeLabel})` : sub.name,
+        formatCurrency(sub.totalAmount)
+      ]);
+    });
+  } else {
+    // Buscar a.6 e 14
+    const parentA = incomeWithTotals.find(c => c.code.toLowerCase() === 'a');
+    const catA6 = parentA?.subcategories?.find(s => s.code.toLowerCase() === 'a.6');
+    const comPartida = partidas.find(p => p.is_base === 1 && (p.code === 'PART-COM' || p.name.toLowerCase() === 'comedor'));
+    const dotacionInicialComedor = comPartida?.initial_budget || 0;
+
+    // Táboa 4.A: Ingresos Comedor a.6 (a.6.1 reflicte a dotación inicial da partida básica de comedor)
+    catA6?.subcategories?.forEach(sub => {
+      const isA61 = sub.code === 'a.6.1';
+      const amount = isA61 ? (sub.totalAmount + dotacionInicialComedor) : sub.totalAmount;
+      totalComedorIncome += amount;
+      a6Rows.push([
+        sub.code,
+        isA61 && dotacionInicialComedor > 0 ? `${sub.name} (* Dotación inicial partida básica)` : sub.name,
+        formatCurrency(amount)
+      ]);
+    });
+  }
 
   autoTable(doc, {
     startY: currentY + 2,
@@ -415,7 +431,10 @@ export function generateClearVectorPdf({
   }
 
   const exp14Rows: any[] = [];
-  cat14?.subcategories?.forEach(sub => {
+  const targetCat14 = selectedComedorPeriod ? selectedComedorPeriod.cat14 : expensesWithTotals.find(c => c.code === '14');
+  const totalComedorExpense = selectedComedorPeriod ? selectedComedorPeriod.totalExpense : (targetCat14?.totalAmount || 0);
+
+  targetCat14?.subcategories?.forEach(sub => {
     if (sub.is_group === 1 && sub.subcategories && sub.subcategories.length > 0) {
       exp14Rows.push([
         sub.code,
@@ -443,7 +462,7 @@ export function generateClearVectorPdf({
     margin: { left: margin, right: margin },
     head: [['Cód.', 'Gastos Comedor Escolar (Categoría 14)', 'Total Executado']],
     body: exp14Rows.length > 0 ? exp14Rows : [['-', 'Sen movementos rexistrados en 14', formatCurrency(0)]],
-    foot: [['TOTAL    :', '', formatCurrency(cat14?.totalAmount || 0)]],
+    foot: [['TOTAL    :', '', formatCurrency(totalComedorExpense)]],
     theme: 'grid',
     styles: {
       fontSize: 7,
@@ -475,7 +494,7 @@ export function generateClearVectorPdf({
 
   // Liña resumo de Saldo Neto Comedor
   currentY = (doc as any).lastAutoTable.finalY + 4;
-  const netComedor = totalComedorIncome - (cat14?.totalAmount || 0);
+  const netComedor = selectedComedorPeriod ? selectedComedorPeriod.saldoNeto : (totalComedorIncome - totalComedorExpense);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(51, 65, 85);

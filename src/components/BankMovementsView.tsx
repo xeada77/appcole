@@ -5,16 +5,14 @@ import {
   Building,
   Utensils,
   Search,
-  CheckCircle2,
-  Clock,
+
   ArrowDownRight,
   ArrowUpRight,
   Printer,
   ShieldCheck,
-  AlertCircle,
   Pencil,
-  Plus,
-  Paperclip
+ 
+  FileText
 } from 'lucide-react';
 import { BankAccount, Movement, BudgetPartida, Category, AcademicYear } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -414,7 +412,7 @@ export default function BankMovementsView({
                             className="inline-flex items-center gap-1 text-[11px] text-indigo-700 font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2 py-0.5 rounded-md transition-colors"
                             title={`Ver factura adxunta: ${mov.invoice_filename || 'Descargar'}`}
                           >
-                            <Paperclip className="h-3 w-3 text-indigo-600" />
+                            <FileText className="h-3 w-3 text-indigo-600" />
                             <span>Factura</span>
                           </a>
                         )}

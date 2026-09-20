@@ -7,7 +7,8 @@ import {
   getExpenseCategories, 
   getCurrentAcademicYear, 
   getAcademicYears,
-  getCategoriesWithTotals 
+  getCategoriesWithTotals,
+  getComedorExecutionReport 
 } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ export default async function InformesPage() {
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
   const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(currentYear.id);
+  const comedorReport = getComedorExecutionReport(currentYear.id);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -41,6 +43,7 @@ export default async function InformesPage() {
           currentYear={currentYear}
           incomeWithTotals={incomeWithTotals}
           expensesWithTotals={expensesWithTotals}
+          comedorReport={comedorReport}
         />
       </main>
     </div>
