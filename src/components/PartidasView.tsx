@@ -11,7 +11,8 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Paperclip
 } from 'lucide-react';
 import { BudgetPartida, Movement } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -205,6 +206,7 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
                             <th className="px-4 py-2.5">Tipo</th>
                             <th className="px-4 py-2.5">Concepto & Ref.</th>
                             <th className="px-4 py-2.5">Categoría Oficial</th>
+                            <th className="px-4 py-2.5 text-center">Factura</th>
                             <th className="px-4 py-2.5 text-right">Importe</th>
                           </tr>
                         </thead>
@@ -241,6 +243,22 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
                               </td>
                               <td className="px-4 py-2.5 text-slate-600">
                                 {m.category_name ? `${m.category_code}.- ${m.category_name}` : '-'}
+                              </td>
+                              <td className="px-4 py-2.5 text-center whitespace-nowrap">
+                                {m.invoice_key ? (
+                                  <a
+                                    href={`/api/movements/${m.id}/invoice?v=${encodeURIComponent(m.invoice_key)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] text-indigo-700 font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2 py-0.5 rounded-md transition-colors"
+                                    title={`Ver factura adxunta: ${m.invoice_filename || 'Descargar'}`}
+                                  >
+                                    <Paperclip className="h-3 w-3 text-indigo-600" />
+                                    <span>Factura</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-300">-</span>
+                                )}
                               </td>
                               <td className="px-4 py-2.5 text-right font-bold whitespace-nowrap">
                                 <span className={m.type === 'INGRESO' ? 'text-emerald-600' : 'text-rose-700'}>
