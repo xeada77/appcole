@@ -7,7 +7,8 @@ import {
   Movement, 
   DashboardStats,
   CrossYearMovement,
-  CrossYearMovementsSummary
+  CrossYearMovementsSummary,
+  Supplier
 } from './types';
 
 function toPlain<T>(data: T): T {
@@ -157,6 +158,7 @@ export interface MovementFilterParams {
   isReconciled?: number; // 0 o 1
   type?: 'INGRESO' | 'GASTO';
   partidaId?: string;
+  supplierId?: string;
   searchTerm?: string;
   includeImputedPartidas?: boolean;
 }
@@ -171,16 +173,19 @@ export function getMovements(filters: MovementFilterParams = {}): Movement[] {
       m.amount, m.partida_id, m.income_category_id, m.expense_category_id,
       m.is_reconciled, m.reconciled_date, m.reference_doc, m.notes,
       m.invoice_key, m.invoice_filename, m.invoice_mimetype, m.invoice_size,
+      m.supplier_id,
       m.created_at,
       b.name as account_name, b.code as account_code,
       p.name as partida_name, p.academic_year_id as partida_year_id,
       COALESCE(ic.name, ec.name) as category_name,
-      COALESCE(ic.code, ec.code) as category_code
+      COALESCE(ic.code, ec.code) as category_code,
+      s.name as supplier_name, s.cif_nif as supplier_cif
     FROM movements m
     JOIN bank_accounts b ON m.bank_account_id = b.id
     LEFT JOIN budget_partidas p ON m.partida_id = p.id
     LEFT JOIN income_categories ic ON m.income_category_id = ic.id
     LEFT JOIN expense_categories ec ON m.expense_category_id = ec.id
+    LEFT JOIN suppliers s ON m.supplier_id = s.id
   `;
 
   const params: (string | number)[] = [];
@@ -213,10 +218,15 @@ export function getMovements(filters: MovementFilterParams = {}): Movement[] {
     params.push(filters.partidaId);
   }
 
+  if (filters.supplierId) {
+    query += ' AND m.supplier_id = ?';
+    params.push(filters.supplierId);
+  }
+
   if (filters.searchTerm) {
-    query += ' AND (m.concept LIKE ? OR m.reference_doc LIKE ? OR m.notes LIKE ?)';
+    query += ' AND (m.concept LIKE ? OR m.reference_doc LIKE ? OR m.notes LIKE ? OR s.name LIKE ? OR s.cif_nif LIKE ?)';
     const like = `%${filters.searchTerm}%`;
-    params.push(like, like, like);
+    params.push(like, like, like, like, like);
   }
 
   query += ' ORDER BY m.date DESC, m.created_at DESC';
@@ -624,6 +634,83 @@ export function getComedorExecutionReport(academicYearId?: string): ComedorExecu
     t2: quarterlyReports['t2'],
     t3: quarterlyReports['t3'],
     t4: quarterlyReports['t4']
+  });
+}
+
+export function getSuppliers(academicYearId?: string): Supplier[] {
+  const db = getDb();
+  const yearId = academicYearId || getCurrentAcademicYear().id;
+
+  const suppliers = db.prepare(`
+    SELECT id, name, cif_nif, address, postal_code, email, phone, notes, created_at, updated_at
+    FROM suppliers
+    ORDER BY name COLLATE NOCASE ASC
+  `).all() as unknown as Supplier[];
+
+  const mapped = suppliers.map(s => {
+    const stats = db.prepare(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN m.type = 'GASTO' AND COALESCE(p.academic_year_id, m.academic_year_id) = ? THEN m.amount ELSE 0 END), 0) as currentYearExpenses,
+        COALESCE(SUM(CASE WHEN m.type = 'INGRESO' AND COALESCE(p.academic_year_id, m.academic_year_id) = ? THEN m.amount ELSE 0 END), 0) as currentYearIncome,
+        COALESCE(SUM(CASE WHEN COALESCE(p.academic_year_id, m.academic_year_id) = ? THEN 1 ELSE 0 END), 0) as currentYearCount,
+        COALESCE(SUM(CASE WHEN m.type = 'GASTO' THEN m.amount ELSE 0 END), 0) as allTimeExpenses
+      FROM movements m
+      LEFT JOIN budget_partidas p ON m.partida_id = p.id
+      WHERE m.supplier_id = ?
+    `).get(yearId, yearId, yearId, s.id) as unknown as {
+      currentYearExpenses: number;
+      currentYearIncome: number;
+      currentYearCount: number;
+      allTimeExpenses: number;
+    };
+
+    return {
+      ...s,
+      current_year_expenses: stats.currentYearExpenses,
+      current_year_income: stats.currentYearIncome,
+      current_year_movements_count: stats.currentYearCount,
+      all_time_expenses: stats.allTimeExpenses
+    };
+  });
+
+  return toPlain(mapped);
+}
+
+export function getSupplierWithMovements(supplierId: string, academicYearId?: string): (Supplier & { movements: Movement[] }) | null {
+  const db = getDb();
+  const yearId = academicYearId || getCurrentAcademicYear().id;
+
+  const supplier = db.prepare(`
+    SELECT id, name, cif_nif, address, postal_code, email, phone, notes, created_at, updated_at
+    FROM suppliers
+    WHERE id = ?
+  `).get(supplierId) as unknown as Supplier | undefined;
+
+  if (!supplier) return null;
+
+  const movements = getMovements({ academicYearId: yearId, supplierId, includeImputedPartidas: true });
+
+  const stats = db.prepare(`
+    SELECT 
+      COALESCE(SUM(CASE WHEN m.type = 'GASTO' AND COALESCE(p.academic_year_id, m.academic_year_id) = ? THEN m.amount ELSE 0 END), 0) as currentYearExpenses,
+      COALESCE(SUM(CASE WHEN m.type = 'INGRESO' AND COALESCE(p.academic_year_id, m.academic_year_id) = ? THEN m.amount ELSE 0 END), 0) as currentYearIncome,
+      COALESCE(SUM(CASE WHEN m.type = 'GASTO' THEN m.amount ELSE 0 END), 0) as allTimeExpenses
+    FROM movements m
+    LEFT JOIN budget_partidas p ON m.partida_id = p.id
+    WHERE m.supplier_id = ?
+  `).get(yearId, yearId, supplierId) as unknown as {
+    currentYearExpenses: number;
+    currentYearIncome: number;
+    allTimeExpenses: number;
+  };
+
+  return toPlain({
+    ...supplier,
+    current_year_expenses: stats.currentYearExpenses,
+    current_year_income: stats.currentYearIncome,
+    current_year_movements_count: movements.length,
+    all_time_expenses: stats.allTimeExpenses,
+    movements
   });
 }
 

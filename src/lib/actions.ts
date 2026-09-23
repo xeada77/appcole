@@ -3,7 +3,7 @@
 import { getDb } from './db';
 import { revalidatePath } from 'next/cache';
 import crypto from 'node:crypto';
-import { getBudgetPartidas } from './queries';
+import { getBudgetPartidas, getSupplierWithMovements } from './queries';
 import { BudgetPartida } from './types';
 import { formatCurrency } from './utils';
 import { uploadInvoice, deleteInvoice } from './storage';
@@ -22,6 +22,7 @@ export async function createMovementAction(formData: FormData) {
   const categoryId = (formData.get('category_id') as string) || null;
   const referenceDoc = (formData.get('reference_doc') as string) || null;
   const notes = (formData.get('notes') as string) || null;
+  const supplierId = (formData.get('supplier_id') as string) || null;
   const isReconciled = formData.get('is_reconciled') === 'true' ? 1 : 0;
   const reconciledDate = isReconciled ? (formData.get('reconciled_date') as string || date) : null;
 
@@ -59,8 +60,9 @@ export async function createMovementAction(formData: FormData) {
       id, bank_account_id, academic_year_id, date, type, concept, amount,
       partida_id, income_category_id, expense_category_id, is_reconciled,
       reconciled_date, reference_doc, notes,
-      invoice_key, invoice_filename, invoice_mimetype, invoice_size
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      invoice_key, invoice_filename, invoice_mimetype, invoice_size,
+      supplier_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -81,7 +83,8 @@ export async function createMovementAction(formData: FormData) {
     invoiceKey,
     invoiceFilename,
     invoiceMimetype,
-    invoiceSize
+    invoiceSize,
+    supplierId
   );
 
   revalidatePath('/', 'layout');
@@ -101,6 +104,7 @@ export async function updateMovementAction(formData: FormData) {
   const categoryId = (formData.get('category_id') as string) || null;
   const referenceDoc = (formData.get('reference_doc') as string) || null;
   const notes = (formData.get('notes') as string) || null;
+  const supplierId = (formData.get('supplier_id') as string) || null;
   const isReconciled = formData.get('is_reconciled') === 'true' ? 1 : 0;
   const reconciledDate = isReconciled ? (formData.get('reconciled_date') as string || date) : null;
 
@@ -176,7 +180,8 @@ export async function updateMovementAction(formData: FormData) {
         invoice_key = ?,
         invoice_filename = ?,
         invoice_mimetype = ?,
-        invoice_size = ?
+        invoice_size = ?,
+        supplier_id = ?
     WHERE id = ?
   `);
 
@@ -197,6 +202,7 @@ export async function updateMovementAction(formData: FormData) {
     invoiceFilename,
     invoiceMimetype,
     invoiceSize,
+    supplierId,
     id
   );
 
@@ -493,6 +499,75 @@ export async function getBackupStatusAction() {
 export async function getPartidasByYearAction(yearId: string): Promise<BudgetPartida[]> {
   return getBudgetPartidas(yearId);
 }
+
+export async function createSupplierAction(formData: FormData) {
+  const db = getDb();
+  const id = 'sup-' + crypto.randomUUID().slice(0, 8);
+  const name = (formData.get('name') as string)?.trim();
+  if (!name) {
+    throw new Error('O nome ou razón social é obrigatorio');
+  }
+  const cifNif = (formData.get('cif_nif') as string)?.trim() || null;
+  const address = (formData.get('address') as string)?.trim() || null;
+  const postalCode = (formData.get('postal_code') as string)?.trim() || null;
+  const email = (formData.get('email') as string)?.trim() || null;
+  const phone = (formData.get('phone') as string)?.trim() || null;
+  const notes = (formData.get('notes') as string)?.trim() || null;
+
+  db.prepare(`
+    INSERT INTO suppliers (id, name, cif_nif, address, postal_code, email, phone, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, name, cifNif, address, postalCode, email, phone, notes);
+
+  revalidatePath('/', 'layout');
+  return { success: true, id };
+}
+
+export async function updateSupplierAction(formData: FormData) {
+  const db = getDb();
+  const id = formData.get('id') as string;
+  const name = (formData.get('name') as string)?.trim();
+  if (!id || !name) {
+    throw new Error('Identificador e nome do provedor son obrigatorios');
+  }
+  const cifNif = (formData.get('cif_nif') as string)?.trim() || null;
+  const address = (formData.get('address') as string)?.trim() || null;
+  const postalCode = (formData.get('postal_code') as string)?.trim() || null;
+  const email = (formData.get('email') as string)?.trim() || null;
+  const phone = (formData.get('phone') as string)?.trim() || null;
+  const notes = (formData.get('notes') as string)?.trim() || null;
+
+  db.prepare(`
+    UPDATE suppliers
+    SET name = ?,
+        cif_nif = ?,
+        address = ?,
+        postal_code = ?,
+        email = ?,
+        phone = ?,
+        notes = ?,
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(name, cifNif, address, postalCode, email, phone, notes, id);
+
+  revalidatePath('/', 'layout');
+  return { success: true, id };
+}
+
+export async function deleteSupplierAction(supplierId: string) {
+  const db = getDb();
+  // Asociacións en movements teñen ON DELETE SET NULL, polo que non se perden movementos
+  db.prepare(`DELETE FROM suppliers WHERE id = ?`).run(supplierId);
+
+  revalidatePath('/', 'layout');
+  return { success: true };
+}
+
+export async function getSupplierMovementsAction(supplierId: string, academicYearId?: string) {
+  return getSupplierWithMovements(supplierId, academicYearId);
+}
+
+
 
 
 

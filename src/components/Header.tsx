@@ -4,7 +4,7 @@
 import NewMovementModal from './NewMovementModal';
 import YearSelector from './YearSelector';
 import BackupModal from './BackupModal';
-import { BankAccount, BudgetPartida, Category, AcademicYear } from '@/lib/types';
+import { BankAccount, BudgetPartida, Category, AcademicYear, Supplier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
 interface HeaderProps {
@@ -14,6 +14,7 @@ interface HeaderProps {
   expenseCategories: Category[];
   currentYear: AcademicYear;
   years: AcademicYear[];
+  suppliers?: Supplier[];
   title?: string;
   subtitle?: string;
 }
@@ -25,6 +26,7 @@ export default function Header({
   expenseCategories,
   currentYear,
   years,
+  suppliers = [],
   title = 'Xestión Económica Escolar',
   subtitle = 'Centro Público de Ensino Infantil e Primaria'
 }: HeaderProps) {
@@ -65,6 +67,7 @@ export default function Header({
             expenseCategories={expenseCategories}
             currentYearId={currentYear.id}
             years={years}
+            suppliers={suppliers}
           />
         </div>
       </div>

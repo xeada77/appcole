@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ArrowDownRight, ArrowUpRight, Pencil, Paperclip } from 'lucide-react';
-import { Movement, BankAccount, BudgetPartida, Category, AcademicYear } from '@/lib/types';
+import { ArrowRight, ArrowDownRight, ArrowUpRight, Pencil, Paperclip, Building2 } from 'lucide-react';
+import { Movement, BankAccount, BudgetPartida, Category, AcademicYear, Supplier } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import ReconciliationButton from './ReconciliationButton';
 import DeleteMovementButton from './DeleteMovementButton';
@@ -16,6 +16,7 @@ interface RecentMovementsTableProps {
   incomeCategories: Category[];
   expenseCategories: Category[];
   years?: AcademicYear[];
+  suppliers?: Supplier[];
 }
 
 export default function RecentMovementsTable({
@@ -24,7 +25,8 @@ export default function RecentMovementsTable({
   partidas,
   incomeCategories,
   expenseCategories,
-  years
+  years,
+  suppliers = []
 }: RecentMovementsTableProps) {
   const [editingMovement, setEditingMovement] = useState<Movement | null>(null);
 
@@ -87,6 +89,15 @@ export default function RecentMovementsTable({
                       {mov.concept}
                     </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {mov.supplier_name && (
+                        <span
+                          className="inline-flex items-center gap-1 text-[11px] text-blue-800 font-medium bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 rounded-md"
+                          title={`Provedor: ${mov.supplier_name}${mov.supplier_cif ? ` (${mov.supplier_cif})` : ''}`}
+                        >
+                          <Building2 className="h-3 w-3 text-blue-600" />
+                          <span>{mov.supplier_name}</span>
+                        </span>
+                      )}
                       {mov.reference_doc && (
                         <span className="text-[11px] text-slate-400 font-mono">Ref: {mov.reference_doc}</span>
                       )}
@@ -169,6 +180,7 @@ export default function RecentMovementsTable({
           incomeCategories={incomeCategories}
           expenseCategories={expenseCategories}
           years={years}
+          suppliers={suppliers}
           isOpen={!!editingMovement}
           onClose={() => setEditingMovement(null)}
         />

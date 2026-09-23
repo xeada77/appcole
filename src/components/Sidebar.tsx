@@ -8,6 +8,7 @@ import {
   Landmark,
   PieChart,
   Tags,
+  Building2,
   FileSpreadsheet,
   CheckCircle2,
   AlertCircle,
@@ -57,6 +58,12 @@ export default function Sidebar({ accounts, currentYear, years }: SidebarProps) 
       name: 'Categorías Oficiais',
       href: '/categorias',
       icon: Tags,
+      badge: null
+    },
+    {
+      name: 'Provedores',
+      href: '/proveedores',
+      icon: Building2,
       badge: null
     },
     {

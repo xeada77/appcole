@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import {
   Building,
+  Building2,
   Utensils,
   Search,
 
@@ -14,7 +15,7 @@ import {
  
   FileText
 } from 'lucide-react';
-import { BankAccount, Movement, BudgetPartida, Category, AcademicYear } from '@/lib/types';
+import { BankAccount, Movement, BudgetPartida, Category, AcademicYear, Supplier } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import ReconciliationButton from './ReconciliationButton';
 import DeleteMovementButton from './DeleteMovementButton';
@@ -30,6 +31,7 @@ interface BankMovementsViewProps {
   expenseCategories: Category[];
   currentYear: AcademicYear;
   years: AcademicYear[];
+  suppliers?: Supplier[];
   initialAccountFilter?: string;
 }
 
@@ -41,6 +43,7 @@ export default function BankMovementsView({
   expenseCategories,
   currentYear,
   years,
+  suppliers = [],
   initialAccountFilter
 }: BankMovementsViewProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>(initialAccountFilter || 'all');
@@ -102,7 +105,8 @@ export default function BankMovementsView({
         const matchesDoc = m.reference_doc?.toLowerCase().includes(query) || false;
         const matchesNotes = m.notes?.toLowerCase().includes(query) || false;
         const matchesCat = m.category_name?.toLowerCase().includes(query) || false;
-        if (!matchesReg && !matchesConcept && !matchesDoc && !matchesNotes && !matchesCat) {
+        const matchesSupplier = m.supplier_name?.toLowerCase().includes(query) || m.supplier_cif?.toLowerCase().includes(query) || false;
+        if (!matchesReg && !matchesConcept && !matchesDoc && !matchesNotes && !matchesCat && !matchesSupplier) {
           return false;
         }
       }
@@ -398,6 +402,15 @@ export default function BankMovementsView({
                         {mov.concept}
                       </div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {mov.supplier_name && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] text-blue-800 font-medium bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 rounded-md"
+                            title={`Provedor: ${mov.supplier_name}${mov.supplier_cif ? ` (${mov.supplier_cif})` : ''}`}
+                          >
+                            <Building2 className="h-3 w-3 text-blue-600" />
+                            <span>{mov.supplier_name}</span>
+                          </span>
+                        )}
                         {mov.reference_doc && (
                           <span className="text-[11px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.2 rounded">
                             Doc: {mov.reference_doc}
@@ -488,6 +501,7 @@ export default function BankMovementsView({
           incomeCategories={incomeCategories}
           expenseCategories={expenseCategories}
           years={years}
+          suppliers={suppliers}
           isOpen={!!editingMovement}
           onClose={() => setEditingMovement(null)}
         />

@@ -7,7 +7,8 @@ import {
   getIncomeCategories, 
   getExpenseCategories, 
   getCurrentAcademicYear, 
-  getAcademicYears 
+  getAcademicYears,
+  getSuppliers
 } from '@/lib/queries';
 
 export default async function BancosPage({
@@ -23,6 +24,7 @@ export default async function BancosPage({
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
   const movements = getMovements({ academicYearId: currentYear.id });
+  const suppliers = getSuppliers(currentYear.id);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -33,6 +35,7 @@ export default async function BancosPage({
         expenseCategories={expenseCats}
         currentYear={currentYear}
         years={years}
+        suppliers={suppliers}
         title="Contas Bancarias & Conciliación"
         subtitle="Xestión de ingresos, gastos e verificación con extractos bancarios"
       />
@@ -46,6 +49,7 @@ export default async function BancosPage({
           expenseCategories={expenseCats}
           currentYear={currentYear}
           years={years}
+          suppliers={suppliers}
           initialAccountFilter={conta}
         />
       </main>

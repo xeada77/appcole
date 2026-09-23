@@ -132,6 +132,19 @@ function initSchema(db: DatabaseSync) {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS suppliers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      cif_nif TEXT,
+      address TEXT,
+      postal_code TEXT,
+      email TEXT,
+      phone TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT
+    );
   `);
 
   // Safe migration for existing databases
@@ -146,6 +159,14 @@ function initSchema(db: DatabaseSync) {
   try { db.exec('ALTER TABLE movements ADD COLUMN invoice_filename TEXT;'); } catch {}
   try { db.exec('ALTER TABLE movements ADD COLUMN invoice_mimetype TEXT;'); } catch {}
   try { db.exec('ALTER TABLE movements ADD COLUMN invoice_size INTEGER;'); } catch {}
+
+  // Safe migration for supplier in movements
+  try {
+    db.exec('ALTER TABLE movements ADD COLUMN supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL;');
+  } catch {}
+  try {
+    db.exec('CREATE INDEX IF NOT EXISTS idx_movements_supplier_id ON movements(supplier_id);');
+  } catch {}
 
   // Safe migration: Subcategorías de Comedor Escolar (Ingresos a.6 e Gastos 14)
   try {

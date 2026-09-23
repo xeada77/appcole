@@ -22,7 +22,8 @@ import {
   getExpenseCategories,
   getCurrentAcademicYear,
   getAcademicYears,
-  getDashboardStats
+  getDashboardStats,
+  getSuppliers
 } from '@/lib/queries';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
   const stats = getDashboardStats(currentYear.id);
+  const suppliers = getSuppliers(currentYear.id);
 
   const funcAcc = accounts.find(a => a.id === 'funcionamento');
   const comAcc = accounts.find(a => a.id === 'comedor');
@@ -49,6 +51,7 @@ export default function DashboardPage() {
         expenseCategories={expenseCats}
         currentYear={currentYear}
         years={years}
+        suppliers={suppliers}
         title="Panel Económico do Centro"
         subtitle={`Resumo xeral do exercicio económico escolar ${currentYear.name}`}
       />
@@ -238,6 +241,7 @@ export default function DashboardPage() {
           incomeCategories={incomeCats}
           expenseCategories={expenseCats}
           years={years}
+          suppliers={suppliers}
         />
       </main>
     </div>

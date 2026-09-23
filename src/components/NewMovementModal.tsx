@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { Plus, X, ArrowDownRight, ArrowUpRight, Check, AlertCircle, Paperclip, FileText } from 'lucide-react';
-import { BankAccount, BudgetPartida, Category, AcademicYear } from '@/lib/types';
+import { BankAccount, BudgetPartida, Category, AcademicYear, Supplier } from '@/lib/types';
 import { createMovementAction, getPartidasByYearAction } from '@/lib/actions';
+import SupplierCombobox from './SupplierCombobox';
 
 interface NewMovementModalProps {
   accounts: BankAccount[];
@@ -12,6 +13,7 @@ interface NewMovementModalProps {
   expenseCategories: Category[];
   currentYearId: string;
   years?: AcademicYear[];
+  suppliers?: Supplier[];
 }
 
 export default function NewMovementModal({
@@ -20,7 +22,8 @@ export default function NewMovementModal({
   incomeCategories,
   expenseCategories,
   currentYearId,
-  years
+  years,
+  suppliers = []
 }: NewMovementModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -67,6 +70,7 @@ export default function NewMovementModal({
   const [categoryId, setCategoryId] = useState('');
   const [referenceDoc, setReferenceDoc] = useState('');
   const [notes, setNotes] = useState('');
+  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [isReconciled, setIsReconciled] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
@@ -133,6 +137,7 @@ export default function NewMovementModal({
       if (categoryId) formData.append('category_id', categoryId);
       if (referenceDoc) formData.append('reference_doc', referenceDoc);
       if (notes) formData.append('notes', notes);
+      if (supplierId) formData.append('supplier_id', supplierId);
       formData.append('is_reconciled', isReconciled ? 'true' : 'false');
       if (invoiceFile) formData.append('invoice', invoiceFile);
 
@@ -143,6 +148,7 @@ export default function NewMovementModal({
       setConcept('');
       setReferenceDoc('');
       setNotes('');
+      setSupplierId(null);
       setIsReconciled(false);
       setInvoiceFile(null);
       setImputeToPreviousYear(false);
@@ -401,6 +407,19 @@ export default function NewMovementModal({
                     </select>
                   </div>
                 </div>
+              </div>
+
+              {/* Provedor Asociado (Opcional) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Provedor (Opcional)</span>
+                  <span className="text-[10px] font-normal text-slate-400">Asocia a empresa ou profesional ao movemento</span>
+                </label>
+                <SupplierCombobox
+                  suppliers={suppliers}
+                  selectedSupplierId={supplierId}
+                  onSelectSupplier={setSupplierId}
+                />
               </div>
 
               {/* Referencia documental y Observaciones */}

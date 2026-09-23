@@ -7,7 +7,8 @@ import {
   getCurrentAcademicYear,
   getAcademicYears,
   getCategoriesWithTotals,
-  getCrossYearCategoryMovements
+  getCrossYearCategoryMovements,
+  getSuppliers
 } from '@/lib/queries';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { 
@@ -30,6 +31,7 @@ export default async function CategoriasPage() {
   const partidas = getBudgetPartidas(currentYear.id);
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
+  const suppliers = getSuppliers(currentYear.id);
   const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(currentYear.id);
   const { attributedToOtherYears, attributedFromOtherYears } = getCrossYearCategoryMovements(currentYear.id);
 
@@ -45,6 +47,7 @@ export default async function CategoriasPage() {
         expenseCategories={expenseCats}
         currentYear={currentYear}
         years={years}
+        suppliers={suppliers}
         title="Categorías Oficiais da Consellería"
         subtitle="Estrutura normalizada de Ingresos (a - l) e Gastos (1 - 14) da Xunta de Galicia"
       />

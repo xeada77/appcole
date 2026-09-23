@@ -1,9 +1,8 @@
 import Header from '@/components/Header';
-import PartidasView from '@/components/PartidasView';
+import ProveedoresView from '@/components/ProveedoresView';
 import { 
   getBankAccounts, 
   getBudgetPartidas, 
-  getMovements, 
   getIncomeCategories, 
   getExpenseCategories, 
   getCurrentAcademicYear, 
@@ -13,14 +12,13 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export default async function PartidasPage() {
+export default async function ProveedoresPage() {
   const currentYear = getCurrentAcademicYear();
   const years = getAcademicYears();
   const accounts = getBankAccounts();
   const partidas = getBudgetPartidas(currentYear.id);
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
-  const movements = getMovements({ academicYearId: currentYear.id, includeImputedPartidas: true });
   const suppliers = getSuppliers(currentYear.id);
 
   return (
@@ -33,15 +31,14 @@ export default async function PartidasPage() {
         currentYear={currentYear}
         years={years}
         suppliers={suppliers}
-        title="Partidas Orzamentarias"
-        subtitle="Control do orzamento anual, dotacións, ingresos e gastos imputados"
+        title="Xestión de Provedores"
+        subtitle="Directorio de empresas, contactos, histórico de gastos e facturación"
       />
 
       <main className="flex-1 p-8 max-w-7xl w-full mx-auto">
-        <PartidasView
-          partidas={partidas}
-          movements={movements}
-          currentYearId={currentYear.id}
+        <ProveedoresView
+          suppliers={suppliers}
+          currentYear={currentYear}
         />
       </main>
     </div>

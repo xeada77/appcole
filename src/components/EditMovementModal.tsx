@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { X, ArrowDownRight, ArrowUpRight, Check, AlertCircle, Pencil, Paperclip, FileText, Trash2, ExternalLink } from 'lucide-react';
-import { BankAccount, BudgetPartida, Category, Movement, AcademicYear } from '@/lib/types';
+import { BankAccount, BudgetPartida, Category, Movement, AcademicYear, Supplier } from '@/lib/types';
 import { updateMovementAction, getPartidasByYearAction } from '@/lib/actions';
+import SupplierCombobox from './SupplierCombobox';
 
 interface EditMovementModalProps {
   movement: Movement;
@@ -12,6 +13,7 @@ interface EditMovementModalProps {
   incomeCategories: Category[];
   expenseCategories: Category[];
   years?: AcademicYear[];
+  suppliers?: Supplier[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -23,6 +25,7 @@ export default function EditMovementModal({
   incomeCategories,
   expenseCategories,
   years,
+  suppliers = [],
   isOpen,
   onClose
 }: EditMovementModalProps) {
@@ -112,9 +115,30 @@ export default function EditMovementModal({
   );
   const [referenceDoc, setReferenceDoc] = useState(movement.reference_doc || '');
   const [notes, setNotes] = useState(movement.notes || '');
+  const [supplierId, setSupplierId] = useState<string | null>(movement.supplier_id || null);
   const [isReconciled, setIsReconciled] = useState(movement.is_reconciled === 1);
   const [removeInvoice, setRemoveInvoice] = useState(false);
   const [newInvoiceFile, setNewInvoiceFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setBankAccountId(movement.bank_account_id);
+    setType(movement.type);
+    setAmount(movement.amount.toString());
+    setDate(movement.date);
+    setConcept(movement.concept);
+    setPartidaId(movement.partida_id || '');
+    setCategoryId(
+      movement.type === 'INGRESO'
+        ? (movement.income_category_id || '')
+        : (movement.expense_category_id || '')
+    );
+    setReferenceDoc(movement.reference_doc || '');
+    setNotes(movement.notes || '');
+    setSupplierId(movement.supplier_id || null);
+    setIsReconciled(movement.is_reconciled === 1);
+    setRemoveInvoice(false);
+    setNewInvoiceFile(null);
+  }, [movement]);
 
   if (!isOpen) return null;
 
@@ -134,6 +158,7 @@ export default function EditMovementModal({
       if (categoryId) formData.append('category_id', categoryId);
       if (referenceDoc) formData.append('reference_doc', referenceDoc);
       if (notes) formData.append('notes', notes);
+      if (supplierId) formData.append('supplier_id', supplierId);
       formData.append('is_reconciled', isReconciled ? 'true' : 'false');
       if (removeInvoice) formData.append('remove_invoice', 'true');
       if (newInvoiceFile) formData.append('invoice', newInvoiceFile);
@@ -385,6 +410,19 @@ export default function EditMovementModal({
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Provedor Asociado (Opcional) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Provedor (Opcional)</span>
+              <span className="text-[10px] font-normal text-slate-400">Asocia a empresa ou profesional ao movemento</span>
+            </label>
+            <SupplierCombobox
+              suppliers={suppliers}
+              selectedSupplierId={supplierId}
+              onSelectSupplier={setSupplierId}
+            />
           </div>
 
           {/* Reference & Notes */}

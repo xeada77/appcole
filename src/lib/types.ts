@@ -62,6 +62,7 @@ export interface Movement {
   invoice_filename?: string | null;
   invoice_mimetype?: string | null;
   invoice_size?: number | null;
+  supplier_id?: string | null;
   created_at: string;
   
   // Joined fields for display
@@ -71,6 +72,27 @@ export interface Movement {
   partida_year_id?: string;
   category_name?: string;
   category_code?: string;
+  supplier_name?: string;
+  supplier_cif?: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  cif_nif?: string | null;
+  address?: string | null;
+  postal_code?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+
+  // Computed / stats fields for active year
+  current_year_expenses?: number;
+  current_year_income?: number;
+  current_year_movements_count?: number;
+  all_time_expenses?: number;
 }
 
 export interface DashboardStats {

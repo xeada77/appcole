@@ -12,7 +12,8 @@ import {
   Layers,
   Sparkles,
   CheckCircle2,
-  Paperclip
+  Paperclip,
+  Building2
 } from 'lucide-react';
 import { BudgetPartida, Movement } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -236,10 +237,21 @@ export default function PartidasView({ partidas, movements, currentYearId }: Par
                                 </span>
                               </td>
                               <td className="px-4 py-2.5">
-                                <span className="font-semibold text-slate-900">{m.concept}</span>
-                                {m.reference_doc && (
-                                  <span className="text-slate-400 font-mono ml-2">({m.reference_doc})</span>
-                                )}
+                                <div className="font-semibold text-slate-900">{m.concept}</div>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  {m.supplier_name && (
+                                    <span
+                                      className="inline-flex items-center gap-1 text-[10px] text-blue-800 font-medium bg-blue-50 border border-blue-200/80 px-1.5 py-0.2 rounded"
+                                      title={`Provedor: ${m.supplier_name}${m.supplier_cif ? ` (${m.supplier_cif})` : ''}`}
+                                    >
+                                      <Building2 className="h-2.5 w-2.5 text-blue-600" />
+                                      <span>{m.supplier_name}</span>
+                                    </span>
+                                  )}
+                                  {m.reference_doc && (
+                                    <span className="text-slate-400 font-mono text-[10px]">({m.reference_doc})</span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-2.5 text-slate-600">
                                 {m.category_name ? `${m.category_code}.- ${m.category_name}` : '-'}

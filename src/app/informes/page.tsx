@@ -8,7 +8,8 @@ import {
   getCurrentAcademicYear, 
   getAcademicYears,
   getCategoriesWithTotals,
-  getComedorExecutionReport 
+  getComedorExecutionReport,
+  getSuppliers
 } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ export default async function InformesPage() {
   const partidas = getBudgetPartidas(currentYear.id);
   const incomeCats = getIncomeCategories();
   const expenseCats = getExpenseCategories();
+  const suppliers = getSuppliers(currentYear.id);
   const { incomeWithTotals, expensesWithTotals } = getCategoriesWithTotals(currentYear.id);
   const comedorReport = getComedorExecutionReport(currentYear.id);
 
@@ -32,6 +34,7 @@ export default async function InformesPage() {
         expenseCategories={expenseCats}
         currentYear={currentYear}
         years={years}
+        suppliers={suppliers}
         title="Informes & Rendición de Contas"
         subtitle="Memoria económica e liquidación orzamentaria para o Consello Escolar e a Administración"
       />
