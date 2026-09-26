@@ -1,13 +1,20 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { ArrowRight, ArrowDownRight, ArrowUpRight, Pencil, Paperclip, Building2 } from 'lucide-react';
-import { Movement, BankAccount, BudgetPartida, Category, AcademicYear, Supplier } from '@/lib/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import ReconciliationButton from './ReconciliationButton';
-import DeleteMovementButton from './DeleteMovementButton';
-import EditMovementModal from './EditMovementModal';
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowRight, Pencil, Building2, FileText } from "lucide-react";
+import {
+  Movement,
+  BankAccount,
+  BudgetPartida,
+  Category,
+  AcademicYear,
+  Supplier,
+} from "@/lib/types";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import ReconciliationButton from "./ReconciliationButton";
+import DeleteMovementButton from "./DeleteMovementButton";
+import EditMovementModal from "./EditMovementModal";
 
 interface RecentMovementsTableProps {
   movements: Movement[];
@@ -26,7 +33,7 @@ export default function RecentMovementsTable({
   incomeCategories,
   expenseCategories,
   years,
-  suppliers = []
+  suppliers = [],
 }: RecentMovementsTableProps) {
   const [editingMovement, setEditingMovement] = useState<Movement | null>(null);
 
@@ -34,14 +41,19 @@ export default function RecentMovementsTable({
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
       <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Últimos Movementos Rexistrados</h2>
-          <p className="text-xs text-slate-500">Histórico recente de ingresos e gastos con edición e conciliación</p>
+          <h2 className="text-lg font-bold text-slate-900">
+            Últimos Movementos Rexistrados
+          </h2>
+          <p className="text-xs text-slate-500">
+            Histórico recente de ingresos e gastos con edición e conciliación
+          </p>
         </div>
         <Link
           href="/bancos"
           className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors self-start sm:self-auto"
         >
-          Ver e filtrar todos os movementos <ArrowRight className="h-3.5 w-3.5" />
+          Ver e filtrar todos os movementos{" "}
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
@@ -61,7 +73,10 @@ export default function RecentMovementsTable({
           <tbody className="divide-y divide-slate-100">
             {movements.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-slate-400 text-sm">
+                <td
+                  colSpan={7}
+                  className="px-5 py-8 text-center text-slate-400 text-sm"
+                >
                   Non hai movementos rexistrados para este ano natural.
                 </td>
               </tr>
@@ -77,11 +92,16 @@ export default function RecentMovementsTable({
                     {formatDate(mov.date)}
                   </td>
                   <td className="px-5 py-3.5 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${mov.bank_account_id === 'comedor'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-blue-100 text-blue-800'
-                      }`}>
-                      {mov.bank_account_id === 'comedor' ? 'COMEDOR' : 'FUNCIONAMENTO'}
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
+                        mov.bank_account_id === "comedor"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {mov.bank_account_id === "comedor"
+                        ? "COMEDOR"
+                        : "FUNCIONAMENTO"}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
@@ -92,42 +112,34 @@ export default function RecentMovementsTable({
                       {mov.supplier_name && (
                         <span
                           className="inline-flex items-center gap-1 text-[11px] text-blue-800 font-medium bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 rounded-md"
-                          title={`Provedor: ${mov.supplier_name}${mov.supplier_cif ? ` (${mov.supplier_cif})` : ''}`}
+                          title={`Provedor: ${mov.supplier_name}${mov.supplier_cif ? ` (${mov.supplier_cif})` : ""}`}
                         >
                           <Building2 className="h-3 w-3 text-blue-600" />
                           <span>{mov.supplier_name}</span>
                         </span>
                       )}
                       {mov.reference_doc && (
-                        <span className="text-[11px] text-slate-400 font-mono">Ref: {mov.reference_doc}</span>
-                      )}
-                      {mov.invoice_key && (
-                        <a
-                          href={`/api/movements/${mov.id}/invoice?v=${encodeURIComponent(mov.invoice_key)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-[11px] text-indigo-700 font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2 py-0.5 rounded-md transition-colors"
-                          title={`Ver factura adxunta: ${mov.invoice_filename || 'Descargar'}`}
-                        >
-                          <Paperclip className="h-3 w-3 text-indigo-600" />
-                          <span>Factura</span>
-                        </a>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          Ref: {mov.reference_doc}
+                        </span>
                       )}
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-xs text-slate-600">
                     {mov.partida_name && (
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="block font-medium text-indigo-700">{mov.partida_name}</span>
-                        {mov.partida_year_id && mov.partida_year_id !== mov.academic_year_id && (
-                          <span 
-                            className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200"
-                            title={`Movemento imputado á partida do ano ${mov.partida_year_id}`}
-                          >
-                            Ano {mov.partida_year_id}
-                          </span>
-                        )}
+                        <span className="block font-medium text-indigo-700">
+                          {mov.partida_name}
+                        </span>
+                        {mov.partida_year_id &&
+                          mov.partida_year_id !== mov.academic_year_id && (
+                            <span
+                              className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200"
+                              title={`Movemento imputado á partida do ano ${mov.partida_year_id}`}
+                            >
+                              Ano {mov.partida_year_id}
+                            </span>
+                          )}
                       </div>
                     )}
                     {mov.category_name && (
@@ -137,19 +149,43 @@ export default function RecentMovementsTable({
                     )}
                   </td>
                   <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                    <span className={`font-bold ${mov.type === 'INGRESO' ? 'text-emerald-600' : 'text-rose-700'
-                      }`}>
-                      {mov.type === 'INGRESO' ? '+' : '-'}{formatCurrency(mov.amount)}
+                    <span
+                      className={`font-bold ${
+                        mov.type === "INGRESO"
+                          ? "text-emerald-600"
+                          : "text-rose-700"
+                      }`}
+                    >
+                      {mov.type === "INGRESO" ? "+" : "-"}
+                      {formatCurrency(mov.amount)}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-5 py-3.5 text-center whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <ReconciliationButton
                       movementId={mov.id}
                       isReconciled={mov.is_reconciled}
                     />
                   </td>
-                  <td className="px-4 py-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-4 py-3.5 text-right whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex items-center justify-end gap-1.5">
+                      {mov.invoice_key && (
+                        <a
+                          href={`/api/movements/${mov.id}/invoice?v=${encodeURIComponent(mov.invoice_key)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer"
+                          title={`Ver factura adxunta: ${mov.invoice_filename || "Descargar"}`}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={() => setEditingMovement(mov)}
@@ -188,4 +224,3 @@ export default function RecentMovementsTable({
     </div>
   );
 }
-
