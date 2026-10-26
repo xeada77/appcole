@@ -400,6 +400,7 @@ export default function BankMovementsView({
             expenseCategories={expenseCategories}
             currentYearId={currentYear.id}
             years={years}
+            suppliers={suppliers}
           />
         </div>
       </div>
